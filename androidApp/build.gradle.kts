@@ -4,11 +4,17 @@ plugins {
     alias(libs.plugins.compose.compiler)
 }
 
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
 android {
-    namespace = "com.jfranco.newmultiplatformapp.android"
+    namespace = "com.jfranco.witcher3.quests.android"
     compileSdk = 35
     defaultConfig {
-        applicationId = "com.jfranco.newmultiplatformapp.android"
+        applicationId = "com.jfranco.witcher3.quests.android"
         minSdk = 25
         targetSdk = 35
         versionCode = 1
@@ -28,11 +34,11 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "17"
     }
 }
 

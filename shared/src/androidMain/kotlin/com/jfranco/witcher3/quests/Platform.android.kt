@@ -1,7 +1,7 @@
-package com.jfranco.newmultiplatformapp
+package com.jfranco.witcher3.quests
 
 class AndroidPlatform : Platform {
     override val name: String = "Android ${android.os.Build.VERSION.SDK_INT}"
 }
 
-actual fun getPlatform(): Platform = AndroidPlatform()
+internal actual fun getPlatform(): Platform = AndroidPlatform()

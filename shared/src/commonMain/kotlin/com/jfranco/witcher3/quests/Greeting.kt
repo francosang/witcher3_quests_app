@@ -1,4 +1,4 @@
-package com.jfranco.newmultiplatformapp
+package com.jfranco.witcher3.quests
 
 class Greeting {
     private val platform: Platform = getPlatform()

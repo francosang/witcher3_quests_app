@@ -14,6 +14,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "New_Multiplatform_App"
+rootProject.name = "witcher3_quests"
 include(":androidApp")
 include(":shared")
+include(":cliApp")

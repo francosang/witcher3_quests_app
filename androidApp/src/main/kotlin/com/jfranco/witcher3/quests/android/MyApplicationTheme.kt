@@ -1,4 +1,4 @@
-package com.jfranco.newmultiplatformapp.android
+package com.jfranco.witcher3.quests.android
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
