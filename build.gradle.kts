@@ -6,4 +6,5 @@ plugins {
     alias(libs.plugins.kotlinJvm).apply(false)
     alias(libs.plugins.kotlinMultiplatform).apply(false)
     alias(libs.plugins.compose.compiler).apply(false)
+    id("org.jetbrains.kotlinx.dataframe") version "0.15.0" apply false
 }

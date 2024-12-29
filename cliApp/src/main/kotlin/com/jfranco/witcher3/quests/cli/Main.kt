@@ -1,7 +1,10 @@
 package com.jfranco.witcher3.quests.cli
 
-import com.jfranco.witcher3.quests.Greeting
+import com.jfranco.witcher3.quests.Quests
+import java.io.FileInputStream
+
 
 fun main() {
-    println("Platform: ${Greeting().greet()}")
+    val foo = FileInputStream("/Users/f.sangiacomo/Downloads/quests.csv").use(::Quests)
+    foo.print()
 }

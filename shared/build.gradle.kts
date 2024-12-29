@@ -3,6 +3,8 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidLibrary)
+
+    id("org.jetbrains.kotlinx.dataframe") version "0.15.0"
 }
 
 java {
@@ -34,7 +36,7 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            //put your multiplatform dependencies here
+            implementation("org.jetbrains.kotlinx:dataframe:0.15.0")
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
