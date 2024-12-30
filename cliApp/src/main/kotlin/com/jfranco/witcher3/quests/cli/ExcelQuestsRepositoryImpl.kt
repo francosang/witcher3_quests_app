@@ -199,6 +199,7 @@ class ExcelQuestsRepositoryImpl(
             val details = it.extraDetails
 
             Quest(
+                id = info.id,
                 location = info.location,
                 quest = info.name,
                 isCompleted = false,

@@ -82,7 +82,7 @@ class MainActivity : ComponentActivity() {
                                 .padding(paddingValues)
                                 .fillMaxSize()
                         ) {
-                            WitcherApp()
+                            LoadDiContainer()
                         }
                     }
                 }
@@ -91,12 +91,3 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-
-
-@Preview
-@Composable
-fun DefaultPreview() {
-    AppTheme {
-        WitcherApp()
-    }
-}

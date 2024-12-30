@@ -19,6 +19,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -66,6 +67,7 @@ fun QuestListItem(
     isSelected: Boolean = false,
     modifier: Modifier = Modifier,
     onClick: (Quest) -> Unit,
+    onCompleted: (Boolean) -> Unit
 ) {
     val cardPadding = 16.dp
     val checkBoxPadding = 10.dp
@@ -105,7 +107,7 @@ fun QuestListItem(
                     }
                     Checkbox(
                         checked = quest.isCompleted,
-                        onCheckedChange = { /*Check Implementation*/ },
+                        onCheckedChange = { onCompleted(it) },
                         modifier = Modifier.padding(end = checkBoxPadding)
                     )
                 }
@@ -178,10 +180,97 @@ fun QuestListItem(
     }
 }
 
+
+@Composable
+fun CompletedQuestListItem(
+    quest: Quest,
+    isSelected: Boolean = false,
+    modifier: Modifier = Modifier,
+    onClick: (Quest) -> Unit,
+    onCompleted: (Boolean) -> Unit
+) {
+    val cardPadding = 16.dp
+    val checkBoxPadding = 10.dp
+
+    Card(
+        modifier = modifier
+            .padding(horizontal = cardPadding, vertical = 4.dp)
+            .semantics { selected = isSelected }
+            .clickable { onClick(quest) },
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+        ) {
+            Row(modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = cardPadding)) {
+                Text(
+                    text = quest.quest,
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .padding(top = 12.dp, bottom = 8.dp),
+                )
+                Checkbox(
+                    checked = quest.isCompleted,
+                    onCheckedChange = { onCompleted(it) },
+                    modifier = Modifier.padding(end = checkBoxPadding)
+                )
+            }
+
+
+            val details = quest.extraDetails
+
+            if (isSelected) {
+                Column {
+                    details.forEach { detail ->
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.tertiaryContainer.copy(
+                                alpha = 0.25F
+                            )
+                        )
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable { },
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                detail.detail,
+                                modifier = Modifier
+                                    .weight(0.5F)
+                                    .padding(cardPadding)
+                                    .fillMaxWidth(),
+                                style = TextStyle(fontSize = 14.sp)
+                            )
+
+                            Checkbox(
+                                checked = detail.isCompleted,
+                                modifier = Modifier
+                                    .padding(end = checkBoxPadding)
+                                    .scale(0.75F),
+                                onCheckedChange = { isChecked ->
+                                    Log.i(
+                                        "MainActivity",
+                                        "Checked: $isChecked"
+                                    )
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Preview
 @Composable
 fun QuestListItemPreview() {
     val sampleQuest = Quest(
+        id = 1,
         quest = "Sample Quest",
         type = Type.Main,
         isCompleted = false,
@@ -197,10 +286,11 @@ fun QuestListItemPreview() {
     )
 
     AppTheme {
-        QuestListItem(
+        CompletedQuestListItem(
             quest = sampleQuest,
             isSelected = true,
-            onClick = {}
+            onClick = {},
+            onCompleted = {}
         )
     }
 }

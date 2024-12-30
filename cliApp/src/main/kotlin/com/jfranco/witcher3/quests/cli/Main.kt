@@ -12,18 +12,6 @@ import org.apache.poi.xssf.usermodel.XSSFColor
 
 fun main() = xlsx()
 
-fun dataFrame() {
-    val repo = FileInputStream("/Users/f.sangiacomo/Downloads/quests.csv")
-        .use(::CsvQuestsRepositoryImpl)
-
-    val quests = repo.all()
-    val json = Json.encodeToString(quests)
-    println(json)
-
-    File("/Users/f.sangiacomo/FranCode/witcher3_quests/androidApp/src/main/res/raw/quests.json")
-        .writeText(json)
-}
-
 fun xlsx() {
     val filePath = "/Users/f.sangiacomo/Downloads/excel.xlsx"
 

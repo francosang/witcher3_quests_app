@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.kotlinAndroid)
     alias(libs.plugins.compose.compiler)
-
+    id("com.google.devtools.ksp")
     kotlin("plugin.serialization") version "2.1.0"
 }
 
@@ -49,6 +49,11 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     implementation("androidx.compose.material:material-icons-extended")
+
+    val room_version = "2.6.1"
+    implementation("androidx.room:room-runtime:$room_version")
+    implementation("androidx.room:room-ktx:$room_version")
+    ksp("androidx.room:room-compiler:$room_version")
 
     implementation(libs.compose.ui)
     implementation(libs.compose.ui.tooling.preview)

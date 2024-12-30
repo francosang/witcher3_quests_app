@@ -1,9 +1,15 @@
 package com.jfranco.w3.quests.shared
 
+import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.Serializable
 
 interface QuestsRepository {
     fun all(): List<Quest>
+}
+
+interface AppQuestsRepository {
+    fun updates(): Flow<List<Pair<String, List<Quest>>>>
+    suspend fun save(questStatus: QuestStatus)
 }
 
 @Serializable
@@ -42,6 +48,7 @@ sealed class Type(val type: String) {
 
 @Serializable
 data class Quest(
+    val id: Int,
     val location: String,
     val quest: String,
     val isCompleted: Boolean,
@@ -58,4 +65,11 @@ data class ExtraDetail(
     val detail: String,
     val link: String?,
     val isCompleted: Boolean,
+)
+
+@Serializable
+data class QuestStatus(
+    val id: Int,
+    val isCompleted: Boolean,
+    val isHidden: Boolean,
 )
