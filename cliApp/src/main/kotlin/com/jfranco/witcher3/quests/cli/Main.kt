@@ -24,46 +24,6 @@ fun dataFrame() {
         .writeText(json)
 }
 
-
-//        for (row in sheet) {
-//            println(row)
-//
-//            for (cell in row) {
-//                val style = cell.cellStyle
-//
-//                // Extract background color
-//                val color = style.fillForegroundColorColor
-//
-//                println("Cell [${cell.rowIndex}, ${cell.columnIndex}] has style: $color")
-//
-//                if (color is XSSFColor) {
-//                    val rgb = color.rgb
-//                    if (rgb != null) {
-//                        println(
-//                            "Cell [${cell.rowIndex}, ${cell.columnIndex}] has RGB color: #${
-//                                "%02x%02x%02x".format(rgb[0], rgb[1], rgb[2])
-//                            }"
-//                        )
-//                    } else {
-//                        println("Cell [${cell.rowIndex}, ${cell.columnIndex}] has no color set.")
-//                    }
-//                } else if (color is HSSFExtendedColor) {
-//                    val rgb = color.rgb
-//                    if (rgb != null) {
-//                        println(
-//                            "Cell [${cell.rowIndex}, ${cell.columnIndex}] has RGB color: #${
-//                                "%02x%02x%02x".format(rgb[0], rgb[1], rgb[2])
-//                            }"
-//                        )
-//                    } else {
-//                        println("Cell [${cell.rowIndex}, ${cell.columnIndex}] has no color set.")
-//                    }
-//                } else {
-//                    println("Cell [${cell.rowIndex}, ${cell.columnIndex}] uses a color format not supported by XSSF.")
-//                }
-//            }
-//        }
-
 fun xlsx() {
     val filePath = "/Users/f.sangiacomo/Downloads/excel.xlsx"
 
@@ -76,28 +36,53 @@ fun xlsx() {
         val startCol = 0 // Column A (index 0)
         val endCol = 6   // Column G (index 6)
 
+        val theOnlyReasonMessage =
+            "THE ONLY REASON THAT 'DESTINATION: SKELLIGE' IS PLACED HERE IS BECAUSE 'FLESH FOR SALE' IS EASILY MISSABLE AND THE ONLY WAY TO DO IT IS IN SKELLIGE. AS LONG AS YOU COMPLETE 'FLESH FOR SALE' BEFORE STARTING 'FOLLOWING THE THREAD', THEN YOU CAN TRAVEL TO SKELLIGE WHEN YOU ARE READY."
+
+        val storyBranchMarker = "STORY BRANCH "
         val noOrderStartMarker = "THE FOLLOWING QUESTS CAN BE DONE AT ANY TIME IN ANY ORDER"
-        var withinNoOrderMarker = false
+        val considerIgnoringNextMarker =
+            "THE FOLLOWING QUEST IS NOT WORTH DOING CONSIDERING HOW OUT OF ORDER YOU WILL HAVE TO DO CERTAIN QUESTS."
+        val theOnlyReasonMarker = "THE ONLY REASON THAT 'DESTINATION: SKELLIGE'"
+
+
+        val skip = listOf(
+            storyBranchMarker,
+            noOrderStartMarker,
+            considerIgnoringNextMarker,
+            "IF YOU WOULD LIKE TO WATCH IT"
+        )
+
+        var anyOrder = false
         var consecutiveBlankRows = 0
+        var considerIgnoringCounter = -1
+        var theOnlyReasonCounter = -1
+
+        var id: Int? = null
+
+        var location: String? = null
+        var questName: String? = null
+        var questColor: String? = null
+        var questLink: String? = null
+        var storyBranch: String? = null
+        var detail: String? = null
+        var detailLink: String? = null
+
+        val quests = mutableMapOf<QuestInfo, List<ExtraDetail>>()
 
         for (row in sheet) {
+
             if (row.rowNum >= startRow) { // Check if row is >= 10
                 // Check if the entire row is blank
                 if (isRowBlank(row)) {
                     consecutiveBlankRows++
                     if (consecutiveBlankRows == 2) {
-                        withinNoOrderMarker = false
+                        anyOrder = false
+                        storyBranch = null
                     }
                     continue // Skip processing this blank row
                 } else {
                     consecutiveBlankRows = 0 // Reset counter if row is not blank
-                }
-
-                // Print marker status
-                if (withinNoOrderMarker) {
-                    print("*\t")
-                } else {
-                    print(" \t")
                 }
 
                 for (colIndex in startCol..endCol) {
@@ -106,28 +91,158 @@ fun xlsx() {
 
                     // Detect start marker
                     if (cellValue == noOrderStartMarker) {
-                        withinNoOrderMarker = true
+                        storyBranch = null
+                        anyOrder = true
                         consecutiveBlankRows = 0
+                        continue
+                    } else if (cellValue?.contains(storyBranchMarker) == true) {
+                        storyBranch = cellValue
+                        continue
+                    } else if (cellValue?.contains(considerIgnoringNextMarker) == true) {
+                        considerIgnoringCounter = 1
+                        continue
+                    } else if (cellValue?.contains(theOnlyReasonMarker) == true) {
+                        theOnlyReasonCounter = 7
+                        continue
                     }
 
-                    print("$cellValue\t")
+                    // Location
+                    if (colIndex == 0) {
+                        // Print marker status
+                        if (anyOrder) {
+                            print("*\t")
+                        } else {
+                            print(" \t")
+                        }
 
+                        if (storyBranch != null) {
+                            val str = storyBranch.removePrefix(storyBranchMarker)
+                            print("$str\t")
+                        } else {
+                            print(" \t")
+                        }
+
+                        if (cellValue != null) {
+                            location = cellValue
+                            print("$cellValue\t")
+                        } else {
+                            print("\t")
+                        }
+                    }
+
+                    // Quest name
                     if (colIndex == 1) {
                         val cellColor = getCellColor(cell)
                         if (cellColor != null) {
                             print("$cellColor\t")
+                            questColor = cellColor
                         }
-                    }
 
-                    // Check for hyperlinks in specific columns (B or D)
-                    if (colIndex == 1 || colIndex == 3) {
                         val hyperlink = cell.hyperlink
                         if (hyperlink != null) {
                             print("${hyperlink.address}\t")
+                            questLink = hyperlink.address
+                        }
+
+                        if (cellValue != null) {
+                            id = row.rowNum
+                            questName = cellValue
+                            print("$cellValue\t")
+                        } else {
+                            print("\t")
+                        }
+                    }
+
+                    // Details
+                    if (colIndex == 3) {
+                        if (cellValue != null) {
+                            detail = cellValue
+                            print("$cellValue\t")
+                        } else {
+                            print("\t")
+                        }
+
+                        val hyperlink = cell.hyperlink
+                        if (hyperlink != null) {
+                            print("${hyperlink.address}\t")
+                            detailLink = hyperlink.address
                         }
                     }
                 }
+
                 println() // Move to the next line after printing all columns in the row
+
+                val details = if (detail != null) {
+                    mutableListOf(ExtraDetail(detail, detailLink, false))
+                } else {
+                    mutableListOf()
+                }
+
+                val msg =
+                    if (theOnlyReasonCounter > 0 && theOnlyReasonCounter < 7) theOnlyReasonMessage else null
+
+                val quest = QuestInfo(
+                    id!!,
+                    location!!,
+                    questName!!,
+                    questColor!!,
+                    questLink!!,
+                    anyOrder,
+                    considerIgnoringCounter == 0,
+                    storyBranch,
+                    msg,
+                )
+
+                if (quests.contains(quest)) {
+                    val existing = quests.getValue(quest)
+                    val new = existing.plus(details)
+                    quests[quest] = new
+                } else {
+                    quests[quest] = details
+                }
+
+                if (considerIgnoringCounter > 0) considerIgnoringCounter--
+                else considerIgnoringCounter = -1
+
+                if (theOnlyReasonCounter > 0) {
+                    theOnlyReasonCounter--
+                } else {
+                    theOnlyReasonCounter = -1
+                }
+            }
+        }
+
+        quests.map {
+            Quest(it.key, it.value)
+        }.forEach {
+            if (it.questInfo.anyOrder) {
+                print("*\t")
+            } else {
+                print(" \t")
+            }
+
+            if (it.questInfo.storyBranch != null) {
+                val str = it.questInfo.storyBranch.removePrefix(storyBranchMarker)
+                print("$str\t")
+            } else {
+                print(" \t")
+            }
+
+            if (it.questInfo.considerIgnoringNext) {
+                print("?\t")
+            } else {
+                print(" \t")
+            }
+
+            if (it.questInfo.theOnlyReasonMessage != null) {
+                print("!\t")
+            } else {
+                print(" \t")
+            }
+
+            println("${it.questInfo.location}, ${it.questInfo.name}, ${it.questInfo.link}, ${it.questInfo.anyOrder}")
+            it.extraDetails.forEach { d ->
+                println("\t\t\t\t\t\t${d.detail}, ${d.link}")
             }
         }
     }
@@ -136,7 +251,7 @@ fun xlsx() {
 // Helper function to check if a row is completely blank
 fun isRowBlank(row: Row): Boolean {
     for (cell in row) {
-        if (getCellValue(cell).isNotBlank()) {
+        if (getCellValue(cell)?.isNotBlank() == true) {
             return false
         }
     }
@@ -156,7 +271,7 @@ fun getCellColor(cell: Cell): String? {
 }
 
 // Helper function to get the value of a cell as a string
-fun getCellValue(cell: Cell): String {
+fun getCellValue(cell: Cell): String? {
     return when (cell.cellType) {
         CellType.STRING -> cell.stringCellValue
         CellType.NUMERIC -> if (DateUtil.isCellDateFormatted(cell)) {
@@ -167,6 +282,29 @@ fun getCellValue(cell: Cell): String {
 
         CellType.BOOLEAN -> cell.booleanCellValue.toString()
         CellType.FORMULA -> cell.cellFormula
-        else -> ""
+        else -> null
     }
 }
+
+data class Quest(
+    val questInfo: QuestInfo,
+    val extraDetails: List<ExtraDetail>,
+)
+
+data class QuestInfo(
+    val id: Int,
+    val location: String,
+    val name: String,
+    val color: String,
+    val link: String,
+    val anyOrder: Boolean,
+    val considerIgnoringNext: Boolean,
+    val storyBranch: String?,
+    val theOnlyReasonMessage: String?,
+)
+
+data class ExtraDetail(
+    val detail: String,
+    val link: String?,
+    val isCompleted: Boolean,
+)
