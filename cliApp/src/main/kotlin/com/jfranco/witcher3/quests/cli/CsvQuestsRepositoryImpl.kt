@@ -1,21 +1,43 @@
-package com.jfranco.witcher3.quests
+package com.jfranco.witcher3.quests.cli
 
+import com.jfranco.w3.quests.shared.Level
+import com.jfranco.w3.quests.shared.Order
+import com.jfranco.w3.quests.shared.Quest
+import com.jfranco.w3.quests.shared.QuestDetail
+import com.jfranco.w3.quests.shared.QuestsRepository
 import org.jetbrains.kotlinx.dataframe.DataFrame
 import org.jetbrains.kotlinx.dataframe.DataRow
 import org.jetbrains.kotlinx.dataframe.api.fillNulls
 import org.jetbrains.kotlinx.dataframe.api.filter
-import org.jetbrains.kotlinx.dataframe.api.filterBy
-import org.jetbrains.kotlinx.dataframe.api.groupBy
 import org.jetbrains.kotlinx.dataframe.api.map
 import org.jetbrains.kotlinx.dataframe.api.prev
 import org.jetbrains.kotlinx.dataframe.api.with
 import org.jetbrains.kotlinx.dataframe.io.readCSV
-import org.jetbrains.kotlinx.dataframe.size
 import java.io.InputStream
 
-class Quests(
+class CsvQuestsRepositoryImpl(
     inputStream: InputStream
-) {
+) : QuestsRepository {
+
+    private data class QuestFlat(
+        val location: String,
+        val quest: String,
+        val isCompleted: Boolean,
+        val suggested: Level,
+        val url: String,
+        val order: Order,
+        val branch: String?,
+        val detail: QuestDetail?,
+    )
+
+    private data class QuestKey(
+        val location: String,
+        val quest: String,
+        val isCompleted: Boolean,
+        val suggested: Level,
+        val url: String,
+        val branch: String?,
+    )
 
     private val questLinks = mapOf(
         "Kaer Morhen (1)" to "https://witcher.fandom.com/wiki/Kaer_Morhen_(quest)?so=search",
@@ -738,24 +760,14 @@ class Quests(
 
     private val anyOrderStart = "THE FOLLOWING QUESTS CAN BE DONE AT ANY TIME IN ANY ORDER"
 
-    private val validLocations = setOf(
-        "KAER MORHEN",
-        "WHITE ORCHARD",
-        "VIZIMA",
-        "VELEN",
-        "SKELLIGE",
-        "NOVIGRAD/OXENFURT",
-        "HEARTS OF STONE",
-        "BLOOD AND WINE",
-    )
-
     private val df = DataFrame.readCSV(inputStream)
 
-    fun print() {
-        println(df.columnNames())
+    override fun all(): List<Quest> {
+        var orderIdx = 1
+        var withoutOrder = false
+        var storyBranch: String? = null
 
-        df
-            .apply { println(size()) }
+        return df
             .fillNulls("Quest").with {
                 val row = this
                 fun prevVal(addDataRow: DataRow<Any?>?): Any? {
@@ -773,81 +785,74 @@ class Quests(
                 if (row["Detail Completed"] != null) prevVal(this)
                 else null
             }
-            .filter { it["Quest"] != null }
+            .filter {
+                val location = it["Location"] as String?
+                it["Quest"] != null ||
+                        location == anyOrderStart ||
+                        location == "ORDER-END-MARKER" ||
+                        location?.contains("STORY BRANCH") == true
+            }
             .fillNullsWithPrev("Location")
-            .groupBy("Location", "Quest")
             .map { row ->
-                val key = row.key
-                val group = row.group
+                val location = row["Location"] as String
+                val quest = row["Quest"] as String?
 
-                val location = key["Location"] as String
-                val quest = key["Quest"] as String
+                if (location == anyOrderStart) {
+                    withoutOrder = true
+                    storyBranch = null
+                } else if (location.contains("STORY BRANCH")) {
+                    storyBranch = location
+                } else if (location == "ORDER-END-MARKER") {
+                    storyBranch = null
+                    withoutOrder = false
+                }
+
+                if (quest == null) {
+                    return@map null
+                }
 
                 val (name, level) = extractLevel(quest)
 
-                Quest(
+                val detail = row["Details"] as String?
+
+                QuestFlat(
                     location = location,
                     quest = name,
                     url = questLinks[quest] ?: throw IllegalArgumentException("No link for $quest"),
                     isCompleted = false,
                     suggested = level,
-                    order = Order.Any,
-                    details = group.filter { it["Details"] != null }.map { g ->
-                        QuestDetail(
-                            detail = g["Details"] as String,
-                            isCompleted = false,
-                        )
-                    },
+                    branch = storyBranch,
+                    order = if (withoutOrder) Order.Any else Order.Suggested(orderIdx++),
+                    detail = detail?.let { QuestDetail(it, false) },
                 )
             }
-            .forEach { q ->
-                q.details.forEach { d ->
-                    println("${q.location} - ${q.quest} - ${q.suggested} - ${d.detail}")
-                }
+            .filterNotNull()
+            .fold(mutableMapOf<QuestKey, Pair<MutableList<QuestDetail>, Order>>()) { acc, q ->
+                val key = QuestKey(
+                    location = q.location,
+                    quest = q.quest,
+                    isCompleted = q.isCompleted,
+                    suggested = q.suggested,
+                    url = q.url,
+                    branch = q.branch,
+                )
+                val details = acc.getOrPut(key) { Pair(mutableListOf(), q.order) }
+                q.detail?.let { details.first.add(it) }
+                acc
+            }
+            .map { (key, pair) ->
+                Quest(
+                    location = key.location,
+                    quest = key.quest,
+                    isCompleted = key.isCompleted,
+                    suggested = key.suggested,
+                    url = key.url,
+                    branch = key.branch,
+                    order = pair.second,
+                    details = pair.first,
+                )
             }
     }
-
-//    fun print() {
-//        var anyOrder = false
-//        var orderIdx = 1
-//
-//        df
-//            .filter { it["Location"] in validLocations }
-//            .fillNullsWithPrev("Location")
-//            .fillNullsWithPrev("Quest")
-//            .fillNullsWithPrev("Quest Completed")
-//            .fillNullsWithPrev("Details")
-//            .fillNullsWithPrev("Detail Completed")
-//            .map {
-//                val location = it["Location"] as String
-//                val quest = it["Quest"] as String
-//                val questCompleted = it["Quest Completed"]
-//                val detail = it["Details"] as String
-//                val isDetCompleted = it["Detail Completed"] as Boolean
-//
-//                val (name, level) = extractLevel(quest)
-//
-//                Quest(
-//                    location = location,
-//                    quest = name,
-//                    url = questLinks[quest] ?: throw IllegalArgumentException("No link for $quest"),
-//                    isCompleted = isTrue(questCompleted),
-//                    suggested = level,
-//                    detail = detail,
-//                    isDetailCompleted = isDetCompleted,
-//                    order = Order.Any,
-////                    details = group.map { g ->
-////                        QuestDetail(
-////                            detail = g["Details"] as String,
-////                            isCompleted = isTrue(g["Detail Completed"]),
-////                        )
-////                    },
-//                )
-//            }
-//            .forEach {
-//                println(it)
-//            }
-//    }
 
     private fun extractLevel(input: String): Pair<String, Level> {
         val regex = "^(.*?)\\s*(?:\\((\\d+)\\))?$".toRegex()
@@ -874,28 +879,3 @@ class Quests(
             prevVal(this)
         }
 }
-
-sealed class Level {
-    data object Unaffected : Level()
-    data class Suggested(val level: Int) : Level()
-}
-
-sealed class Order {
-    data object Any : Order()
-    data class Suggested(val level: Int) : Order()
-}
-
-data class Quest(
-    val location: String,
-    val quest: String,
-    val suggested: Level,
-    val url: String,
-    val order: Order,
-    val isCompleted: Boolean,
-    val details: List<QuestDetail>,
-)
-
-data class QuestDetail(
-    val detail: String,
-    val isCompleted: Boolean,
-)

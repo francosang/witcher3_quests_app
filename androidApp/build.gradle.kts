@@ -2,6 +2,8 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.kotlinAndroid)
     alias(libs.plugins.compose.compiler)
+
+    kotlin("plugin.serialization") version "2.1.0"
 }
 
 java {
@@ -15,7 +17,7 @@ android {
     compileSdk = 35
     defaultConfig {
         applicationId = "com.jfranco.witcher3.quests.android"
-        minSdk = 25
+        minSdk = 26
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
@@ -43,7 +45,10 @@ android {
 }
 
 dependencies {
-    implementation(projects.shared)
+    implementation(project(":shared"))
+
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+
     implementation(libs.compose.ui)
     implementation(libs.compose.ui.tooling.preview)
     implementation(libs.compose.material3)
