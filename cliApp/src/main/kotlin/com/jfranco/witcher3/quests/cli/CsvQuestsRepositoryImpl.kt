@@ -1,9 +1,9 @@
 package com.jfranco.witcher3.quests.cli
 
+import com.jfranco.w3.quests.shared.ExtraDetail
 import com.jfranco.w3.quests.shared.Level
 import com.jfranco.w3.quests.shared.Order
 import com.jfranco.w3.quests.shared.Quest
-import com.jfranco.w3.quests.shared.QuestDetail
 import com.jfranco.w3.quests.shared.QuestsRepository
 import org.jetbrains.kotlinx.dataframe.DataFrame
 import org.jetbrains.kotlinx.dataframe.DataRow
@@ -27,7 +27,7 @@ class CsvQuestsRepositoryImpl(
         val url: String,
         val order: Order,
         val branch: String?,
-        val detail: QuestDetail?,
+        val detail: ExtraDetail?,
     )
 
     private data class QuestKey(
@@ -823,11 +823,11 @@ class CsvQuestsRepositoryImpl(
                     suggested = level,
                     branch = storyBranch,
                     order = if (withoutOrder) Order.Any else Order.Suggested(orderIdx++),
-                    detail = detail?.let { QuestDetail(it, false) },
+                    detail = detail?.let { ExtraDetail(it, null, false) },
                 )
             }
             .filterNotNull()
-            .fold(mutableMapOf<QuestKey, Pair<MutableList<QuestDetail>, Order>>()) { acc, q ->
+            .fold(mutableMapOf<QuestKey, Pair<MutableList<ExtraDetail>, Order>>()) { acc, q ->
                 val key = QuestKey(
                     location = q.location,
                     quest = q.quest,
@@ -849,7 +849,7 @@ class CsvQuestsRepositoryImpl(
                     url = key.url,
                     branch = key.branch,
                     order = pair.second,
-                    details = pair.first,
+                    extraDetails = pair.first,
                 )
             }
     }

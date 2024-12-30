@@ -33,11 +33,12 @@ data class Quest(
     val url: String,
     val branch: String?,
     val order: Order,
-    val details: List<QuestDetail>,
+    val extraDetails: List<ExtraDetail>,
 )
 
 @Serializable
-data class QuestDetail(
+data class ExtraDetail(
     val detail: String,
+    val link: String?,
     val isCompleted: Boolean,
 )
