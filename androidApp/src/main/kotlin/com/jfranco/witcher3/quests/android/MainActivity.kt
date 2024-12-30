@@ -68,7 +68,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            AppTheme {
+            AppTheme(
+                useDarkTheme = false
+            ) {
                 Surface {
                     Scaffold(
                         topBar = {
