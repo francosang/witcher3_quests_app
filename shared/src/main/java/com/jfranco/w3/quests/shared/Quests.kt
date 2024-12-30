@@ -25,6 +25,22 @@ sealed class Order {
 }
 
 @Serializable
+sealed class Type(val type: String) {
+    @Serializable
+    data object Main : Type("Main")
+
+    @Serializable
+    data object Secondary : Type("Secondary")
+
+    @Serializable
+    data object Contracts : Type("Contract")
+
+    @Serializable
+    data object TreasureHunt : Type("Treasure Hunt")
+
+}
+
+@Serializable
 data class Quest(
     val location: String,
     val quest: String,
@@ -34,6 +50,7 @@ data class Quest(
     val branch: String?,
     val order: Order,
     val extraDetails: List<ExtraDetail>,
+    val type: Type = Type.Main
 )
 
 @Serializable

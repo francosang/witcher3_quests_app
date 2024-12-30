@@ -48,6 +48,7 @@ dependencies {
     implementation(project(":shared"))
 
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+    implementation("androidx.compose.material:material-icons-extended")
 
     implementation(libs.compose.ui)
     implementation(libs.compose.ui.tooling.preview)
