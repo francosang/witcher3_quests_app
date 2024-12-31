@@ -30,7 +30,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.room.Room
-import com.jfranco.w3.quests.shared.AppQuestsRepository
+import com.jfranco.w3.quests.shared.QuestsRepository
 import com.jfranco.w3.quests.shared.Quest
 import com.jfranco.w3.quests.shared.QuestStatus
 import com.jfranco.witcher3.quests.android.persistence.AppDatabase
@@ -43,7 +43,7 @@ sealed class DiContainer {
 
     data class Ready(
         val appContext: Context,
-        val questsRepository: AppQuestsRepository
+        val questsRepository: QuestsRepository
     ) : DiContainer()
 
     data object Loading : DiContainer()

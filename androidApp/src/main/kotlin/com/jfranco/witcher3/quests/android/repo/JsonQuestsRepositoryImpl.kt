@@ -1,6 +1,6 @@
 package com.jfranco.witcher3.quests.android.repo
 
-import com.jfranco.w3.quests.shared.AppQuestsRepository
+import com.jfranco.w3.quests.shared.QuestsRepository
 import com.jfranco.w3.quests.shared.Quest
 import com.jfranco.w3.quests.shared.QuestStatus
 
@@ -16,7 +16,7 @@ import java.io.InputStreamReader
 class JsonQuestsRepositoryImpl(
     private val content: InputStream,
     private val questStatusDao: QuestStatusDao,
-) : AppQuestsRepository {
+) : QuestsRepository {
 
     private val questsByLocation: List<Pair<String, List<Quest>>> by lazy {
         val reader = BufferedReader(InputStreamReader(content))

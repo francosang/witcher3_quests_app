@@ -61,7 +61,6 @@ fun QuestImage(
 //    )
 }
 
-
 @Composable
 fun QuestCard(
     modifier: Modifier = Modifier,
@@ -162,7 +161,6 @@ fun QuestCard(
                                     .weight(1f)
                                     .padding(vertical = contentPadding / 2),
                                 style = MaterialTheme.typography.bodySmall,
-//                                style = TextStyle(fontSize = 14.sp)
                             )
                             CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
                                 Checkbox(

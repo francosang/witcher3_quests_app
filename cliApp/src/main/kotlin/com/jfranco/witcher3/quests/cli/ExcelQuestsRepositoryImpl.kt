@@ -4,19 +4,32 @@ import com.jfranco.w3.quests.shared.ExtraDetail
 import com.jfranco.w3.quests.shared.Level
 import com.jfranco.w3.quests.shared.Order
 import com.jfranco.w3.quests.shared.Quest
-import com.jfranco.w3.quests.shared.QuestsRepository
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import org.apache.poi.ss.usermodel.Cell
+import org.apache.poi.ss.usermodel.CellStyle
+import org.apache.poi.ss.usermodel.CellType
+import org.apache.poi.ss.usermodel.DateUtil
 import org.apache.poi.ss.usermodel.Row
 import org.apache.poi.ss.usermodel.Workbook
 import org.apache.poi.ss.usermodel.WorkbookFactory
+import org.apache.poi.xssf.usermodel.XSSFCellStyle
+import org.apache.poi.xssf.usermodel.XSSFColor
+import java.io.File
 import java.io.InputStream
+
+interface DataExtractor {
+    fun extractData(): List<Quest>
+    fun write(data: List<Quest>, destination: String)
+}
 
 class ExcelQuestsRepositoryImpl(
     inputStream: InputStream
-) : QuestsRepository {
+) : DataExtractor {
 
     private val workbook: Workbook = WorkbookFactory.create(inputStream)
 
-    override fun all(): List<Quest> {
+    override fun extractData(): List<Quest> {
         val sheet = workbook.getSheetAt(1)
 
         // Define the starting row and column range (A to G corresponds to 0 to 6 in zero-based indexing)
@@ -212,21 +225,67 @@ class ExcelQuestsRepositoryImpl(
         }
     }
 
-    private data class QuestRaw(
-        val questInfo: QuestInfo,
-        val extraDetails: List<ExtraDetail>,
-    )
+    override fun write(data: List<Quest>, destination: String) {
 
-    private data class QuestInfo(
-        val id: Int,
-        val location: String,
-        val name: String,
-        val color: String,
-        val link: String,
-        val anyOrder: Boolean,
-        val considerIgnoringNext: Boolean,
-        val storyBranch: String?,
-        val theOnlyReasonMessage: String?,
-    )
+        val json = Json.encodeToString(data)
+        println(json)
 
+        File(destination).writeText(json)
+    }
 }
+
+
+// Helper function to check if a row is completely blank
+fun isRowBlank(row: Row): Boolean {
+    for (cell in row) {
+        if (getCellValue(cell)?.isNotBlank() == true) {
+            return false
+        }
+    }
+    return true
+}
+
+// Helper function to get the cell's background color as a hex string
+fun getCellColor(cell: Cell): String? {
+    return when (val cellStyle: CellStyle = cell.cellStyle) {
+        is XSSFCellStyle -> { // For .xlsx files
+            val xssfColor: XSSFColor? = cellStyle.fillForegroundColorColor
+            xssfColor?.rgb?.joinToString("") { "%02x".format(it) }
+        }
+
+        else -> null
+    }
+}
+
+// Helper function to get the value of a cell as a string
+fun getCellValue(cell: Cell): String? {
+    return when (cell.cellType) {
+        CellType.STRING -> cell.stringCellValue
+        CellType.NUMERIC -> if (DateUtil.isCellDateFormatted(cell)) {
+            cell.localDateTimeCellValue.toString()
+        } else {
+            cell.numericCellValue.toString()
+        }
+
+        CellType.BOOLEAN -> cell.booleanCellValue.toString()
+        CellType.FORMULA -> cell.cellFormula
+        else -> null
+    }
+}
+
+private data class QuestRaw(
+    val questInfo: QuestInfo,
+    val extraDetails: List<ExtraDetail>,
+)
+
+private data class QuestInfo(
+    val id: Int,
+    val location: String,
+    val name: String,
+    val color: String,
+    val link: String,
+    val anyOrder: Boolean,
+    val considerIgnoringNext: Boolean,
+    val storyBranch: String?,
+    val theOnlyReasonMessage: String?,
+)
