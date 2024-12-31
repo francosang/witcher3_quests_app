@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -18,20 +19,20 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.jfranco.w3.quests.shared.ExtraDetail
 import com.jfranco.w3.quests.shared.Level
 import com.jfranco.w3.quests.shared.Order
@@ -62,213 +63,185 @@ fun QuestImage(
 
 
 @Composable
-fun QuestListItem(
+fun QuestCard(
+    modifier: Modifier = Modifier,
     quest: Quest,
     isSelected: Boolean = false,
-    modifier: Modifier = Modifier,
     onClick: (Quest) -> Unit,
-    onCompleted: (Boolean) -> Unit
+    onCompletedChanged: (Boolean) -> Unit
 ) {
-    val cardPadding = 16.dp
-    val checkBoxPadding = 10.dp
-
     Card(
         modifier = modifier
-            .padding(horizontal = cardPadding, vertical = 4.dp)
             .semantics { selected = isSelected }
-            .clickable { onClick(quest) },
+            .clickable { onClick(quest) }
+            .fillMaxWidth(),
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
+        val contentPadding = if (quest.isCompleted) 8.dp else 16.dp
+
+        Row(
+            modifier = Modifier.padding(contentPadding),
+            verticalAlignment = Alignment.CenterVertically
         ) {
+            if (quest.isCompleted.not()) {
+                QuestImage(description = "Main")
+            }
+
             Column(
-                Modifier
-                    .padding(start = cardPadding)
-                    .padding(top = cardPadding),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = contentPadding / 2)
+                    .weight(1f),
+                verticalArrangement = Arrangement.Center
             ) {
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    QuestImage(description = "Main")
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(start = 12.dp)
-                            .padding(top = 4.dp),
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = quest.type.type,
-                            style = MaterialTheme.typography.labelMedium,
-                        )
-                        Text(
-                            text = "Level #",
-                            style = MaterialTheme.typography.labelMedium,
-                        )
-                    }
-                    Checkbox(
-                        checked = quest.isCompleted,
-                        onCheckedChange = { onCompleted(it) },
-                        modifier = Modifier.padding(end = checkBoxPadding)
+                if (quest.isCompleted) {
+                    Text(
+                        text = quest.quest,
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                } else {
+                    Text(
+                        text = quest.type.type,
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                    Text(
+                        text = "Level #",
+                        style = MaterialTheme.typography.labelMedium,
                     )
                 }
+            }
 
+            if (quest.isCompleted) {
                 Text(
-                    text = quest.quest,
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 12.dp, bottom = 8.dp),
+                    modifier = Modifier.padding(end = contentPadding),
+                    text = "Completed",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontStyle = FontStyle.Italic,
                 )
-            }
-
-            val details = quest.extraDetails
-
-            if (isSelected) {
-                Column {
-                    details.forEach { detail ->
-                        HorizontalDivider(
-                            color = MaterialTheme.colorScheme.tertiaryContainer.copy(
-                                alpha = 0.25F
-                            )
-                        )
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .clickable { },
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                detail.detail,
-                                modifier = Modifier
-                                    .weight(0.5F)
-                                    .padding(cardPadding)
-                                    .fillMaxWidth(),
-                                style = TextStyle(fontSize = 14.sp)
-                            )
-
-                            Checkbox(
-                                checked = detail.isCompleted,
-                                modifier = Modifier
-                                    .padding(end = checkBoxPadding)
-                                    .scale(0.75F),
-                                onCheckedChange = { isChecked ->
-                                    Log.i(
-                                        "MainActivity",
-                                        "Checked: $isChecked"
-                                    )
-                                }
-                            )
-                        }
-                    }
+            } else {
+                CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
+                    Checkbox(
+                        checked = quest.isCompleted,
+                        onCheckedChange = { onCompletedChanged(it) },
+                    )
                 }
-            }
-
-            if (details.isNotEmpty()) {
-                Icon(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = cardPadding)
-                        .padding(bottom = cardPadding)
-                        .clickable {
-                            onClick(quest)
-                        },
-                    imageVector = if (isSelected) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                    contentDescription = null
-                )
             }
         }
-    }
-}
 
-
-@Composable
-fun CompletedQuestListItem(
-    quest: Quest,
-    isSelected: Boolean = false,
-    modifier: Modifier = Modifier,
-    onClick: (Quest) -> Unit,
-    onCompleted: (Boolean) -> Unit
-) {
-    val cardPadding = 16.dp
-    val checkBoxPadding = 10.dp
-
-    Card(
-        modifier = modifier
-            .padding(horizontal = cardPadding, vertical = 4.dp)
-            .semantics { selected = isSelected }
-            .clickable { onClick(quest) },
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-        ) {
-            Row(modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = cardPadding)) {
-                Text(
-                    text = quest.quest,
-                    style = MaterialTheme.typography.titleSmall,
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                        .padding(top = 12.dp, bottom = 8.dp),
-                )
-                Checkbox(
-                    checked = quest.isCompleted,
-                    onCheckedChange = { onCompleted(it) },
-                    modifier = Modifier.padding(end = checkBoxPadding)
-                )
-            }
-
+        if (quest.isCompleted.not()) {
+            Text(
+                text = quest.quest,
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier
+                    .padding(horizontal = contentPadding)
+                    .fillMaxWidth(),
+            )
 
             val details = quest.extraDetails
 
             if (isSelected) {
-                Column {
+                Column(
+                    Modifier.padding(top = contentPadding)
+                ) {
                     details.forEach { detail ->
                         HorizontalDivider(
                             color = MaterialTheme.colorScheme.tertiaryContainer.copy(
                                 alpha = 0.25F
                             )
                         )
+
                         Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .clickable { },
+                            modifier = Modifier
+                                .clickable { }
+                                .padding(horizontal = contentPadding)
+                                .fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
                                 detail.detail,
                                 modifier = Modifier
-                                    .weight(0.5F)
-                                    .padding(cardPadding)
-                                    .fillMaxWidth(),
-                                style = TextStyle(fontSize = 14.sp)
+                                    .weight(1f)
+                                    .padding(vertical = contentPadding / 2),
+                                style = MaterialTheme.typography.bodySmall,
+//                                style = TextStyle(fontSize = 14.sp)
                             )
-
-                            Checkbox(
-                                checked = detail.isCompleted,
-                                modifier = Modifier
-                                    .padding(end = checkBoxPadding)
-                                    .scale(0.75F),
-                                onCheckedChange = { isChecked ->
-                                    Log.i(
-                                        "MainActivity",
-                                        "Checked: $isChecked"
-                                    )
-                                }
-                            )
+                            CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
+                                Checkbox(
+                                    checked = detail.isCompleted,
+                                    onCheckedChange = { isChecked ->
+                                        Log.i(
+                                            "MainActivity",
+                                            "Checked: $isChecked"
+                                        )
+                                    }
+                                )
+                            }
                         }
                     }
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.tertiaryContainer.copy(
+                            alpha = 0.25F
+                        )
+                    )
                 }
             }
+
+            Icon(
+                modifier = Modifier
+                    .padding(vertical = 8.dp)
+                    .align(Alignment.CenterHorizontally)
+                    .clickable {
+                        onClick(quest)
+                    },
+                imageVector = if (isSelected) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                contentDescription = null
+            )
         }
     }
 }
 
 @Preview
 @Composable
-fun QuestListItemPreview() {
+fun QuestsCompletedPreview() {
+    val sampleQuest = Quest(
+        id = 1,
+        quest = "Sample Quest",
+        type = Type.Main,
+        isCompleted = true,
+        extraDetails = listOf(
+            ExtraDetail("Detail 1", null, false),
+            ExtraDetail("Detail 2", null, true)
+        ),
+        location = "Location",
+        suggested = Level.Unaffected,
+        url = "url",
+        branch = null,
+        order = Order.Suggested(1)
+    )
+    AppTheme(
+        useDarkTheme = false
+    ) {
+        Column {
+            QuestCard(
+                quest = sampleQuest,
+                isSelected = false,
+                onClick = {},
+                onCompletedChanged = {}
+            )
+            Spacer(modifier = Modifier.size(8.dp))
+            QuestCard(
+                quest = sampleQuest,
+                isSelected = true,
+                onClick = {},
+                onCompletedChanged = {}
+            )
+        }
+    }
+}
+
+
+@Preview
+@Composable
+fun QuestsOpenPreview() {
     val sampleQuest = Quest(
         id = 1,
         quest = "Sample Quest",
@@ -285,12 +258,23 @@ fun QuestListItemPreview() {
         order = Order.Suggested(1)
     )
 
-    AppTheme {
-        CompletedQuestListItem(
-            quest = sampleQuest,
-            isSelected = true,
-            onClick = {},
-            onCompleted = {}
-        )
+    AppTheme(
+        useDarkTheme = false
+    ) {
+        Column {
+            QuestCard(
+                quest = sampleQuest,
+                isSelected = false,
+                onClick = {},
+                onCompletedChanged = {}
+            )
+            Spacer(modifier = Modifier.size(8.dp))
+            QuestCard(
+                quest = sampleQuest,
+                isSelected = true,
+                onClick = {},
+                onCompletedChanged = {}
+            )
+        }
     }
 }

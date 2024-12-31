@@ -128,54 +128,29 @@ fun WitcherApp(di: DiContainer.Ready) {
                 }
 
                 items(quests) {
+                    QuestCard(
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                        quest = it,
+                        isSelected = expandedItems.contains(it),
+                        onClick = ::onClick,
+                        onCompletedChanged = { isChecked ->
 
-                    if (it.isCompleted) {
-                        CompletedQuestListItem(
-                            quest = it,
-                            isSelected = expandedItems.contains(it),
-                            onClick = ::onClick,
-                            onCompleted = { isChecked ->
+                            Log.i(
+                                "MainActivity",
+                                "Checked: $isChecked"
+                            )
 
-                                Log.i(
-                                    "MainActivity",
-                                    "Checked: $isChecked"
-                                )
-
-                                coroutineScope.launch {
-                                    di.questsRepository.save(
-                                        QuestStatus(
-                                            id = it.id,
-                                            isCompleted = isChecked,
-                                            isHidden = false
-                                        )
+                            coroutineScope.launch {
+                                di.questsRepository.save(
+                                    QuestStatus(
+                                        id = it.id,
+                                        isCompleted = isChecked,
+                                        isHidden = false
                                     )
-                                }
-                            }
-                        )
-                    } else {
-                        QuestListItem(
-                            quest = it,
-                            isSelected = expandedItems.contains(it),
-                            onClick = ::onClick,
-                            onCompleted = { isChecked ->
-
-                                Log.i(
-                                    "MainActivity",
-                                    "Checked: $isChecked"
                                 )
-
-                                coroutineScope.launch {
-                                    di.questsRepository.save(
-                                        QuestStatus(
-                                            id = it.id,
-                                            isCompleted = isChecked,
-                                            isHidden = false
-                                        )
-                                    )
-                                }
                             }
-                        )
-                    }
+                        }
+                    )
                 }
             }
         }
