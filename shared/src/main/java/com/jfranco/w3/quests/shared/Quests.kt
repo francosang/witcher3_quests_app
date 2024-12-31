@@ -11,10 +11,17 @@ interface QuestsRepository {
 @Serializable
 sealed class Level {
     @Serializable
-    data object Unaffected : Level()
+    data object Any : Level()
 
     @Serializable
     data class Suggested(val level: Int) : Level()
+
+    fun show(): String {
+        return when (this) {
+            is Any -> "Any"
+            is Suggested -> level.toString()
+        }
+    }
 }
 
 @Serializable

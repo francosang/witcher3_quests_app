@@ -23,7 +23,7 @@ interface DataExtractor {
     fun write(data: List<Quest>, destination: String)
 }
 
-class ExcelQuestsRepositoryImpl(
+class ExcelExtractor(
     inputStream: InputStream
 ) : DataExtractor {
 
@@ -174,12 +174,15 @@ class ExcelQuestsRepositoryImpl(
                 val msg =
                     if (theOnlyReasonCounter > 0 && theOnlyReasonCounter < 7) theOnlyReasonMessage else null
 
+                val (name, level) = extractLevel(questName!!)
+
                 val quest = QuestInfo(
                     id!!,
                     location!!,
-                    questName!!,
+                    name,
                     questColor!!,
                     questLink!!,
+                    level,
                     anyOrder,
                     considerIgnoringCounter == 0,
                     storyBranch,
@@ -216,7 +219,7 @@ class ExcelQuestsRepositoryImpl(
                 location = info.location,
                 quest = info.name,
                 isCompleted = false,
-                suggested = Level.Unaffected,
+                suggested = info.level,
                 url = info.link,
                 branch = info.storyBranch,
                 order = if (info.anyOrder) Order.Any else Order.Suggested(info.id),
@@ -226,7 +229,6 @@ class ExcelQuestsRepositoryImpl(
     }
 
     override fun write(data: List<Quest>, destination: String) {
-
         val json = Json.encodeToString(data)
         println(json)
 
@@ -273,6 +275,15 @@ fun getCellValue(cell: Cell): String? {
     }
 }
 
+private fun extractLevel(input: String): Pair<String, Level> {
+    val regex = "^(.*?)\\s*(?:\\((\\d+)\\))?$".toRegex()
+    val matchResult = regex.find(input)
+    val firstPart = matchResult?.groups?.get(1)?.value ?: ""
+    val level = matchResult?.groups?.get(2)?.value?.toInt()
+    val levelObj = if (level == null) Level.Any else Level.Suggested(level)
+    return Pair(firstPart, levelObj)
+}
+
 private data class QuestRaw(
     val questInfo: QuestInfo,
     val extraDetails: List<ExtraDetail>,
@@ -284,8 +295,9 @@ private data class QuestInfo(
     val name: String,
     val color: String,
     val link: String,
+    val level: Level,
     val anyOrder: Boolean,
-    val considerIgnoringNext: Boolean,
+    val considerIgnoring: Boolean,
     val storyBranch: String?,
     val theOnlyReasonMessage: String?,
 )

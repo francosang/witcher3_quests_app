@@ -8,7 +8,7 @@ fun xlsx() {
     val filePath = "/Users/f.sangiacomo/Downloads/excel.xlsx"
 
     val repo = FileInputStream(filePath)
-        .use(::ExcelQuestsRepositoryImpl)
+        .use(::ExcelExtractor)
 
     val quests = repo.extractData()
 

@@ -103,7 +103,7 @@ fun QuestCard(
                         style = MaterialTheme.typography.labelMedium,
                     )
                     Text(
-                        text = "Level #",
+                        text = "Level: ${quest.suggested.show()}",
                         style = MaterialTheme.typography.labelMedium,
                     )
                 }
@@ -210,7 +210,7 @@ fun QuestsCompletedPreview() {
             ExtraDetail("Detail 2", null, true)
         ),
         location = "Location",
-        suggested = Level.Unaffected,
+        suggested = Level.Any,
         url = "url",
         branch = null,
         order = Order.Suggested(1)
@@ -250,7 +250,7 @@ fun QuestsOpenPreview() {
             ExtraDetail("Detail 2", null, true)
         ),
         location = "Location",
-        suggested = Level.Unaffected,
+        suggested = Level.Any,
         url = "url",
         branch = null,
         order = Order.Suggested(1)
