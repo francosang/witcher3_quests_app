@@ -29,7 +29,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -75,58 +74,61 @@ fun QuestCard(
             .clickable { onClick(quest) }
             .fillMaxWidth(),
     ) {
-        val contentPadding = if (quest.isCompleted) 8.dp else 16.dp
+        val isBigCard = if (quest.isCompleted) {
+            isSelected
+        } else {
+            true
+        }
+
+        val contentPadding = 16.dp
+        val contentVerticalPadding = if (quest.isCompleted) 8.dp else 16.dp
 
         Row(
-            modifier = Modifier.padding(contentPadding),
+            modifier = Modifier
+                .padding(horizontal = contentPadding)
+                .padding(vertical = contentVerticalPadding),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (quest.isCompleted.not()) {
+            if (isBigCard) {
                 QuestImage(description = "Main")
             }
 
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = contentPadding / 2)
                     .weight(1f),
                 verticalArrangement = Arrangement.Center
             ) {
-                if (quest.isCompleted) {
+                if (isBigCard) {
+                    Column(
+                        Modifier.padding(start = contentPadding / 2)
+                    ) {
+                        Text(
+                            text = quest.type.type,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        Text(
+                            text = "Level: ${quest.suggested.show()}",
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                } else {
                     Text(
                         text = quest.quest,
                         style = MaterialTheme.typography.titleSmall,
                     )
-                } else {
-                    Text(
-                        text = quest.type.type,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                    Text(
-                        text = "Level: ${quest.suggested.show()}",
-                        style = MaterialTheme.typography.bodySmall,
-                    )
                 }
             }
 
-            if (quest.isCompleted) {
-                Text(
-                    modifier = Modifier.padding(end = contentPadding),
-                    text = "Completed",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontStyle = FontStyle.Italic,
+            CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
+                Checkbox(
+                    checked = quest.isCompleted,
+                    onCheckedChange = { onCompletedChanged(it) },
                 )
-            } else {
-                CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
-                    Checkbox(
-                        checked = quest.isCompleted,
-                        onCheckedChange = { onCompletedChanged(it) },
-                    )
-                }
             }
         }
 
-        if (quest.isCompleted.not()) {
+        if (isBigCard) {
             Text(
                 text = quest.quest,
                 style = MaterialTheme.typography.titleLarge,
