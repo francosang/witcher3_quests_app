@@ -1,4 +1,4 @@
-package com.jfranco.witcher3.quests.android
+package com.jfranco.witcher3.quests.android.ui
 
 import android.util.Log
 import androidx.compose.foundation.background
@@ -81,7 +81,7 @@ fun QuestCard(
         }
 
         val contentPadding = 16.dp
-        val contentVerticalPadding = if (quest.isCompleted) 8.dp else 16.dp
+        val contentVerticalPadding = if (isBigCard) 16.dp else 8.dp
 
         Row(
             modifier = Modifier

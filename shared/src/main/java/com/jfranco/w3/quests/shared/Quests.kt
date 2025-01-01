@@ -6,6 +6,7 @@ import kotlinx.serialization.Serializable
 interface QuestsRepository {
     fun updates(): Flow<List<QuestsCollection>>
     suspend fun save(questStatus: QuestStatus)
+    val quests: List<Quest>
 }
 
 @Serializable

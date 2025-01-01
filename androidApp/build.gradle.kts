@@ -49,6 +49,7 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     implementation("androidx.compose.material:material-icons-extended")
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
 
     val room_version = "2.6.1"
     implementation("androidx.room:room-runtime:$room_version")

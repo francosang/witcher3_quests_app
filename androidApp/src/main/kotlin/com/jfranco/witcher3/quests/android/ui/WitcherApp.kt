@@ -1,6 +1,5 @@
-package com.jfranco.witcher3.quests.android
+package com.jfranco.witcher3.quests.android.ui
 
-import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -17,72 +16,37 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.room.Room
-import com.jfranco.w3.quests.shared.QuestsRepository
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.CreationExtras
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jfranco.w3.quests.shared.Quest
 import com.jfranco.w3.quests.shared.QuestStatus
 import com.jfranco.w3.quests.shared.QuestsCollection
-import com.jfranco.witcher3.quests.android.persistence.AppDatabase
-import com.jfranco.witcher3.quests.android.repo.JsonQuestsRepositoryImpl
-import kotlinx.coroutines.Dispatchers
+import com.jfranco.w3.quests.shared.QuestsRepository
+import com.jfranco.witcher3.quests.android.MainApp
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
-sealed class DiContainer {
-
-    data class Ready(
-        val appContext: Context,
-        val questsRepository: QuestsRepository
-    ) : DiContainer()
-
-    data object Loading : DiContainer()
-
-}
-
-@Composable
-fun LoadDiContainer() {
-    var diContainer by remember { mutableStateOf<DiContainer>(DiContainer.Loading) }
-
-    when (val di = diContainer) {
-        is DiContainer.Loading -> {
-            val context = LocalContext.current
-            LaunchedEffect(diContainer) {
-                diContainer = buildDi(context)
-            }
-
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
-            ) {
-                Text("Loading app...")
-                CircularProgressIndicator()
-            }
-        }
-
-        is DiContainer.Ready -> WitcherApp(di)
-
-    }
-}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun WitcherApp(di: DiContainer.Ready) {
-    val coroutineScope = rememberCoroutineScope()
-    val questsByLocation by di.questsRepository.updates().collectAsStateWithLifecycle(emptyList())
+fun WitcherApp() {
+    val viewModel = questsViewModel()
+    val questsByLocation by viewModel.updates().collectAsStateWithLifecycle(emptyList())
 
     if (questsByLocation.isEmpty()) {
         Column(
@@ -146,15 +110,13 @@ fun WitcherApp(di: DiContainer.Ready) {
                                             "Checked: $isChecked"
                                         )
 
-                                        coroutineScope.launch {
-                                            di.questsRepository.save(
-                                                QuestStatus(
-                                                    id = it.id,
-                                                    isCompleted = isChecked,
-                                                    isHidden = false
-                                                )
+                                        viewModel.save(
+                                            QuestStatus(
+                                                id = it.id,
+                                                isCompleted = isChecked,
+                                                isHidden = false
                                             )
-                                        }
+                                        )
                                     }
                                 )
                             }
@@ -204,15 +166,13 @@ fun WitcherApp(di: DiContainer.Ready) {
                                                 "Checked: $isChecked"
                                             )
 
-                                            coroutineScope.launch {
-                                                di.questsRepository.save(
-                                                    QuestStatus(
-                                                        id = it.id,
-                                                        isCompleted = isChecked,
-                                                        isHidden = false
-                                                    )
+                                            viewModel.save(
+                                                QuestStatus(
+                                                    id = it.id,
+                                                    isCompleted = isChecked,
+                                                    isHidden = false
                                                 )
-                                            }
+                                            )
                                         }
                                     )
                                 }
@@ -225,16 +185,94 @@ fun WitcherApp(di: DiContainer.Ready) {
 }
 
 
-suspend fun buildDi(context: Context) = withContext(Dispatchers.IO) {
-    val appContext = context.applicationContext
+@Composable
+fun questsViewModel(): QuestsViewModel {
+    return viewModel<QuestsViewModel>(factory = QuestsViewModel.Factory)
+}
 
-    val inputStream = appContext.resources.openRawResource(R.raw.quests)
+enum class QuestsCompleted {
+    LOADING,
+    SHOWING,
+    HIDDEN
+}
 
-    val db = Room.databaseBuilder(
-        context,
-        AppDatabase::class.java, "w3_db"
-    ).build()
+class QuestsViewModel(
+    private val questsRepository: QuestsRepository,
+) : ViewModel() {
 
-    val questsRepository = JsonQuestsRepositoryImpl(inputStream, db.questStatusDao())
-    DiContainer.Ready(appContext, questsRepository)
+    // Backing property to avoid state updates from other classes
+    private val _showingCompletedQuests = MutableStateFlow(QuestsCompleted.SHOWING)
+
+    val showingCompletedQuests: StateFlow<QuestsCompleted> = _showingCompletedQuests
+
+    fun count(): Int {
+        return questsRepository.quests.count()
+    }
+
+    fun updates(): Flow<List<QuestsCollection>> {
+        return combine(showingCompletedQuests, questsRepository.updates()) { showing, quests ->
+            if (showing == QuestsCompleted.SHOWING) {
+                quests
+            } else {
+                quests.mapNotNull { collection ->
+                    when (collection) {
+                        is QuestsCollection.QuestsByLocation -> {
+                            collection.copy(
+                                quests = collection.quests.filter { !it.isCompleted }
+                            )
+                        }
+
+                        is QuestsCollection.QuestsGrouped -> {
+
+                            val groups = collection.questsGroups.mapNotNull {
+                                val updatedQuests = it.quests.filter { q -> !q.isCompleted }
+
+                                if (updatedQuests.isNotEmpty()) {
+                                    it.copy(quests = updatedQuests)
+                                } else {
+                                    null
+                                }
+                            }
+
+                            if (groups.isNotEmpty()) {
+                                collection.copy(questsGroups = groups)
+                            } else {
+                                null
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fun save(questStatus: QuestStatus) = viewModelScope.launch {
+        questsRepository.save(questStatus)
+    }
+
+    fun showCompletedQuests() {
+        _showingCompletedQuests.value = QuestsCompleted.SHOWING
+    }
+
+    fun hideCompletedQuests() {
+        _showingCompletedQuests.value = QuestsCompleted.HIDDEN
+    }
+
+    companion object {
+
+        val Factory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
+            override fun <T : ViewModel> create(
+                modelClass: Class<T>,
+                extras: CreationExtras
+            ): T {
+                // Get the Application object from extras
+                val application = checkNotNull(extras[APPLICATION_KEY]) as MainApp
+
+                @Suppress("UNCHECKED_CAST")
+                return QuestsViewModel(
+                    application.container.questsRepository,
+                ) as T
+            }
+        }
+    }
 }
