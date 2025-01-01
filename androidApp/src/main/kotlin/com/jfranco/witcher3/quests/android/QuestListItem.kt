@@ -100,11 +100,11 @@ fun QuestCard(
                 } else {
                     Text(
                         text = quest.type.type,
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.typography.bodySmall,
                     )
                     Text(
                         text = "Level: ${quest.suggested.show()}",
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.typography.bodySmall,
                     )
                 }
             }
@@ -197,7 +197,7 @@ fun QuestCard(
     }
 }
 
-@Preview
+@Preview(name = "Quests Completed")
 @Composable
 fun QuestsCompletedPreview() {
     val sampleQuest = Quest(
@@ -237,7 +237,7 @@ fun QuestsCompletedPreview() {
 }
 
 
-@Preview
+@Preview(name = "Quests Pending")
 @Composable
 fun QuestsOpenPreview() {
     val sampleQuest = Quest(

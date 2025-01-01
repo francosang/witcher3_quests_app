@@ -4,7 +4,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.Serializable
 
 interface QuestsRepository {
-    fun updates(): Flow<List<Pair<String, List<Quest>>>>
+    fun updates(): Flow<List<QuestsCollection>>
     suspend fun save(questStatus: QuestStatus)
 }
 
@@ -20,6 +20,27 @@ sealed class Level {
         return when (this) {
             is Any -> "Any"
             is Suggested -> level.toString()
+        }
+    }
+}
+
+data class QuestGroup(
+    val name: String,
+    val quests: List<Quest>
+)
+
+sealed class QuestsCollection {
+
+    data class QuestsByLocation(val location: String, val quests: List<Quest>) :
+        QuestsCollection()
+
+    data class QuestsGrouped(val location: String, val questsGroups: List<QuestGroup>) :
+        QuestsCollection()
+
+    fun location(): String {
+        return when (this) {
+            is QuestsByLocation -> location
+            is QuestsGrouped -> location
         }
     }
 }

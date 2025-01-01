@@ -52,6 +52,7 @@ class ExcelExtractor(
         var theOnlyReasonCounter = -1
 
         var id: Int? = null
+        var orderIndex = 0
 
         var location: String? = null
         var questName: String? = null
@@ -139,6 +140,7 @@ class ExcelExtractor(
 
                         if (cellValue != null) {
                             id = row.rowNum
+                            orderIndex++
                             questName = cellValue
                             print("$cellValue\t")
                         } else {
@@ -183,7 +185,7 @@ class ExcelExtractor(
                     questColor!!,
                     questLink!!,
                     level,
-                    anyOrder,
+                    if (anyOrder) Order.Any else Order.Suggested(orderIndex),
                     considerIgnoringCounter == 0,
                     storyBranch,
                     msg,
@@ -222,7 +224,7 @@ class ExcelExtractor(
                 suggested = info.level,
                 url = info.link,
                 branch = info.storyBranch,
-                order = if (info.anyOrder) Order.Any else Order.Suggested(info.id),
+                order = info.order,
                 extraDetails = details
             )
         }
@@ -296,7 +298,7 @@ private data class QuestInfo(
     val color: String,
     val link: String,
     val level: Level,
-    val anyOrder: Boolean,
+    val order: Order,
     val considerIgnoring: Boolean,
     val storyBranch: String?,
     val theOnlyReasonMessage: String?,

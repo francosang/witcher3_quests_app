@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -33,6 +34,7 @@ import androidx.room.Room
 import com.jfranco.w3.quests.shared.QuestsRepository
 import com.jfranco.w3.quests.shared.Quest
 import com.jfranco.w3.quests.shared.QuestStatus
+import com.jfranco.w3.quests.shared.QuestsCollection
 import com.jfranco.witcher3.quests.android.persistence.AppDatabase
 import com.jfranco.witcher3.quests.android.repo.JsonQuestsRepositoryImpl
 import kotlinx.coroutines.Dispatchers
@@ -107,52 +109,117 @@ fun WitcherApp(di: DiContainer.Ready) {
                 .fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            questsByLocation.forEach { (location, quests) ->
-                stickyHeader {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.background)
-                            .wrapContentHeight()
-                    ) {
-                        Text(
-                            text = location,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(6.dp)
-                                .padding(top = 8.dp),
-                            style = MaterialTheme.typography.headlineSmall,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                }
+            questsByLocation
+                .forEach { collection ->
+                    when (collection) {
+                        is QuestsCollection.QuestsByLocation -> {
+                            stickyHeader {
+                                Surface(Modifier.fillParentMaxWidth()) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(MaterialTheme.colorScheme.background)
+                                            .wrapContentHeight()
+                                    ) {
+                                        Text(
+                                            text = collection.location(),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(6.dp)
+                                                .padding(top = 8.dp),
+                                            style = MaterialTheme.typography.headlineSmall,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                }
+                            }
 
-                items(quests) {
-                    QuestCard(
-                        modifier = Modifier.padding(horizontal = 12.dp),
-                        quest = it,
-                        isSelected = expandedItems.contains(it),
-                        onClick = ::onClick,
-                        onCompletedChanged = { isChecked ->
+                            items(collection.quests) {
+                                QuestCard(
+                                    modifier = Modifier.padding(horizontal = 12.dp),
+                                    quest = it,
+                                    isSelected = expandedItems.contains(it),
+                                    onClick = ::onClick,
+                                    onCompletedChanged = { isChecked ->
+                                        Log.i(
+                                            "MainActivity",
+                                            "Checked: $isChecked"
+                                        )
 
-                            Log.i(
-                                "MainActivity",
-                                "Checked: $isChecked"
-                            )
-
-                            coroutineScope.launch {
-                                di.questsRepository.save(
-                                    QuestStatus(
-                                        id = it.id,
-                                        isCompleted = isChecked,
-                                        isHidden = false
-                                    )
+                                        coroutineScope.launch {
+                                            di.questsRepository.save(
+                                                QuestStatus(
+                                                    id = it.id,
+                                                    isCompleted = isChecked,
+                                                    isHidden = false
+                                                )
+                                            )
+                                        }
+                                    }
                                 )
                             }
                         }
-                    )
+
+                        is QuestsCollection.QuestsGrouped -> {
+
+                            collection.questsGroups.forEach { (groupName, quests) ->
+                                stickyHeader {
+                                    Surface(Modifier.fillParentMaxWidth()) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .wrapContentHeight()
+                                        ) {
+                                            Text(
+                                                text = collection.location(),
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(6.dp)
+                                                    .padding(top = 8.dp),
+                                                style = MaterialTheme.typography.headlineSmall,
+                                                textAlign = TextAlign.Center
+                                            )
+
+                                            Text(
+                                                text = groupName,
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(bottom = 8.dp),
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                textAlign = TextAlign.Center
+                                            )
+                                        }
+                                    }
+                                }
+
+                                items(quests) {
+                                    QuestCard(
+                                        modifier = Modifier.padding(horizontal = 12.dp),
+                                        quest = it,
+                                        isSelected = expandedItems.contains(it),
+                                        onClick = ::onClick,
+                                        onCompletedChanged = { isChecked ->
+                                            Log.i(
+                                                "MainActivity",
+                                                "Checked: $isChecked"
+                                            )
+
+                                            coroutineScope.launch {
+                                                di.questsRepository.save(
+                                                    QuestStatus(
+                                                        id = it.id,
+                                                        isCompleted = isChecked,
+                                                        isHidden = false
+                                                    )
+                                                )
+                                            }
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
-            }
         }
     }
 }
