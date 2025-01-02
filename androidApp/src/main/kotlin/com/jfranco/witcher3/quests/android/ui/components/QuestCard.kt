@@ -1,4 +1,4 @@
-package com.jfranco.witcher3.quests.android.ui
+package com.jfranco.witcher3.quests.android.ui.components
 
 import android.util.Log
 import androidx.compose.foundation.background
@@ -37,7 +37,7 @@ import com.jfranco.w3.quests.shared.Level
 import com.jfranco.w3.quests.shared.Order
 import com.jfranco.w3.quests.shared.Quest
 import com.jfranco.w3.quests.shared.Type
-import com.jfranco.witcher3.quests.android.theme.AppTheme
+import com.jfranco.witcher3.quests.android.ui.theme.AppTheme
 
 @Composable
 fun QuestImage(

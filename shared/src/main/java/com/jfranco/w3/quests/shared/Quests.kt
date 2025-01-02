@@ -9,6 +9,17 @@ interface QuestsRepository {
     val quests: List<Quest>
 }
 
+data class QuestGroup(
+    val name: String,
+    val quests: List<Quest>
+)
+
+enum class QuestsCompleted {
+    LOADING,
+    SHOWING,
+    HIDDEN
+}
+
 @Serializable
 sealed class Level {
     @Serializable
@@ -24,11 +35,6 @@ sealed class Level {
         }
     }
 }
-
-data class QuestGroup(
-    val name: String,
-    val quests: List<Quest>
-)
 
 sealed class QuestsCollection {
 

@@ -1,4 +1,4 @@
-package com.jfranco.witcher3.quests.android.ui
+package com.jfranco.witcher3.quests.android.ui.screens
 
 import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -33,8 +33,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jfranco.w3.quests.shared.Quest
 import com.jfranco.w3.quests.shared.QuestStatus
 import com.jfranco.w3.quests.shared.QuestsCollection
+import com.jfranco.w3.quests.shared.QuestsCompleted
 import com.jfranco.w3.quests.shared.QuestsRepository
 import com.jfranco.witcher3.quests.android.MainApp
+import com.jfranco.witcher3.quests.android.ui.components.QuestCard
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -44,7 +46,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun WitcherApp() {
+fun QuestsScreen() {
     val viewModel = questsViewModel()
     val questsByLocation by viewModel.updates().collectAsStateWithLifecycle(emptyList())
 
@@ -188,12 +190,6 @@ fun WitcherApp() {
 @Composable
 fun questsViewModel(): QuestsViewModel {
     return viewModel<QuestsViewModel>(factory = QuestsViewModel.Factory)
-}
-
-enum class QuestsCompleted {
-    LOADING,
-    SHOWING,
-    HIDDEN
 }
 
 class QuestsViewModel(

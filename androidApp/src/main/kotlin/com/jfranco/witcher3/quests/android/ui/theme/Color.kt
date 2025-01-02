@@ -1,4 +1,4 @@
-package com.jfranco.witcher3.quests.android.theme
+package com.jfranco.witcher3.quests.android.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

@@ -1,4 +1,4 @@
-package com.jfranco.witcher3.quests.android.theme
+package com.jfranco.witcher3.quests.android.ui.theme
 
 /*
  * Copyright 2022 The Android Open Source Project
@@ -108,17 +108,9 @@ fun AppTheme(
             if (useDarkTheme) dynamicDarkColorScheme(context)
             else dynamicLightColorScheme(context)
         }
+
         useDarkTheme -> DarkColors
         else -> LightColors
-    }
-
-    val view = LocalView.current
-    if (!view.isInEditMode) {
-        SideEffect {
-            val window = (view.context as Activity).window
-            window.statusBarColor = colors.primary.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = useDarkTheme
-        }
     }
 
     MaterialTheme(
