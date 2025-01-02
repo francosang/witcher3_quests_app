@@ -9,16 +9,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -33,14 +34,19 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jfranco.w3.quests.shared.Quest
 import com.jfranco.w3.quests.shared.QuestStatus
 import com.jfranco.w3.quests.shared.QuestsCollection
-import com.jfranco.w3.quests.shared.QuestsCompleted
 import com.jfranco.w3.quests.shared.QuestsRepository
+import com.jfranco.w3.quests.shared.filter
 import com.jfranco.witcher3.quests.android.MainApp
+import com.jfranco.witcher3.quests.android.ui.components.IndexedLazyColumn
 import com.jfranco.witcher3.quests.android.ui.components.QuestCard
+import com.jfranco.witcher3.quests.android.ui.components.rememberIndexedLazyListState
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 
@@ -48,6 +54,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun QuestsScreen() {
     val viewModel = questsViewModel()
+    val coroutineScope = rememberCoroutineScope()
     val questsByLocation by viewModel.updates().collectAsStateWithLifecycle(emptyList())
 
     if (questsByLocation.isEmpty()) {
@@ -60,7 +67,14 @@ fun QuestsScreen() {
             CircularProgressIndicator()
         }
     } else {
+        val indexedListState = rememberIndexedLazyListState()
         val expandedItems = remember { mutableStateListOf<Quest>() }
+
+        LaunchedEffect(Unit) {
+            viewModel.searchSelectedQuest.collect {
+                indexedListState.animateScrollToItem(it.id)
+            }
+        }
 
         fun onClick(quest: Quest) {
             if (expandedItems.contains(quest)) {
@@ -70,9 +84,10 @@ fun QuestsScreen() {
             }
         }
 
-        LazyColumn(
+        IndexedLazyColumn(
             modifier = Modifier
                 .fillMaxSize(),
+            state = indexedListState,
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             questsByLocation
@@ -100,7 +115,7 @@ fun QuestsScreen() {
                                 }
                             }
 
-                            items(collection.quests) {
+                            items(collection.quests, key = { it.id }) {
                                 QuestCard(
                                     modifier = Modifier.padding(horizontal = 12.dp),
                                     quest = it,
@@ -156,7 +171,7 @@ fun QuestsScreen() {
                                     }
                                 }
 
-                                items(quests) {
+                                items(quests, key = { it.id }) {
                                     QuestCard(
                                         modifier = Modifier.padding(horizontal = 12.dp),
                                         quest = it,
@@ -196,49 +211,32 @@ class QuestsViewModel(
     private val questsRepository: QuestsRepository,
 ) : ViewModel() {
 
-    // Backing property to avoid state updates from other classes
-    private val _showingCompletedQuests = MutableStateFlow(QuestsCompleted.SHOWING)
+    private val _hidingCompletedQuests = MutableStateFlow<Boolean?>(false)
+    val hidingCompletedQuests: StateFlow<Boolean?> = _hidingCompletedQuests
 
-    val showingCompletedQuests: StateFlow<QuestsCompleted> = _showingCompletedQuests
+    private val _isSearching = MutableStateFlow(false)
+    val isSearching = _isSearching.asStateFlow()
 
-    fun count(): Int {
-        return questsRepository.quests.count()
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery = _searchQuery.asStateFlow()
+
+    private val _searchSelectedQuest = MutableSharedFlow<Quest>(replay = 0)
+    val searchSelectedQuest: Flow<Quest> = _searchSelectedQuest
+
+    val quests: List<Quest> = questsRepository.quests
+
+    val filteredQuests = _searchQuery.map { query ->
+        questsRepository.quests.filter {
+            it.quest.contains(query, ignoreCase = true)
+        }
     }
 
-    fun updates(): Flow<List<QuestsCollection>> {
-        return combine(showingCompletedQuests, questsRepository.updates()) { showing, quests ->
-            if (showing == QuestsCompleted.SHOWING) {
-                quests
-            } else {
-                quests.mapNotNull { collection ->
-                    when (collection) {
-                        is QuestsCollection.QuestsByLocation -> {
-                            collection.copy(
-                                quests = collection.quests.filter { !it.isCompleted }
-                            )
-                        }
-
-                        is QuestsCollection.QuestsGrouped -> {
-
-                            val groups = collection.questsGroups.mapNotNull {
-                                val updatedQuests = it.quests.filter { q -> !q.isCompleted }
-
-                                if (updatedQuests.isNotEmpty()) {
-                                    it.copy(quests = updatedQuests)
-                                } else {
-                                    null
-                                }
-                            }
-
-                            if (groups.isNotEmpty()) {
-                                collection.copy(questsGroups = groups)
-                            } else {
-                                null
-                            }
-                        }
-                    }
-                }
-            }
+    fun updates(): Flow<List<QuestsCollection>> = combine(
+        hidingCompletedQuests,
+        questsRepository.updates(),
+    ) { hiding, quests ->
+        quests.filter {
+            if (hiding == true) !it.isCompleted else true
         }
     }
 
@@ -247,11 +245,29 @@ class QuestsViewModel(
     }
 
     fun showCompletedQuests() {
-        _showingCompletedQuests.value = QuestsCompleted.SHOWING
+        _hidingCompletedQuests.value = false
     }
 
     fun hideCompletedQuests() {
-        _showingCompletedQuests.value = QuestsCompleted.HIDDEN
+        _hidingCompletedQuests.value = true
+    }
+
+    fun updateSearchQuery(text: String) {
+        _searchQuery.value = text
+    }
+
+    fun toggleSearch(boolean: Boolean) {
+        _isSearching.value = boolean
+        if (boolean.not()) {
+            updateSearchQuery("")
+        }
+    }
+
+    fun searchSelected(quest: Quest) {
+        viewModelScope.launch {
+            _searchSelectedQuest.emit(quest)
+            toggleSearch(false)
+        }
     }
 
     companion object {

@@ -2,6 +2,7 @@ package com.jfranco.w3.quests.shared
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.Serializable
+import java.util.function.Predicate
 
 interface QuestsRepository {
     fun updates(): Flow<List<QuestsCollection>>
@@ -50,6 +51,38 @@ sealed class QuestsCollection {
             is QuestsGrouped -> location
         }
     }
+}
+
+fun List<QuestsCollection>.filter(predicate: (Quest) -> Boolean): List<QuestsCollection> {
+    return mapNotNull { collection ->
+        when (collection) {
+            is QuestsCollection.QuestsByLocation -> {
+                collection.copy(
+                    quests = collection.quests.filter(predicate)
+                )
+            }
+
+            is QuestsCollection.QuestsGrouped -> {
+
+                val groups = collection.questsGroups.mapNotNull {
+                    val updatedQuests = it.quests.filter(predicate)
+
+                    if (updatedQuests.isNotEmpty()) {
+                        it.copy(quests = updatedQuests)
+                    } else {
+                        null
+                    }
+                }
+
+                if (groups.isNotEmpty()) {
+                    collection.copy(questsGroups = groups)
+                } else {
+                    null
+                }
+            }
+        }
+    }
+
 }
 
 @Serializable
