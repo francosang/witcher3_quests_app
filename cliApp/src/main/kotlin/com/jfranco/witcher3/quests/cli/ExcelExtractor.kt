@@ -11,12 +11,27 @@ import org.apache.poi.ss.usermodel.CellStyle
 import org.apache.poi.ss.usermodel.CellType
 import org.apache.poi.ss.usermodel.DateUtil
 import org.apache.poi.ss.usermodel.Row
+import org.apache.poi.ss.usermodel.Sheet
 import org.apache.poi.ss.usermodel.Workbook
 import org.apache.poi.ss.usermodel.WorkbookFactory
 import org.apache.poi.xssf.usermodel.XSSFCellStyle
 import org.apache.poi.xssf.usermodel.XSSFColor
 import java.io.File
 import java.io.InputStream
+
+// Define the starting row and column range (A to G corresponds to 0 to 6 in zero-based indexing)
+const val startRow = 9 // Row 10 (index 9)
+const val startCol = 0 // Column A (index 0)
+const val endCol = 6   // Column G (index 6)
+
+const val theOnlyReasonMessage =
+    "THE ONLY REASON THAT 'DESTINATION: SKELLIGE' IS PLACED HERE IS BECAUSE 'FLESH FOR SALE' IS EASILY MISSABLE AND THE ONLY WAY TO DO IT IS IN SKELLIGE. AS LONG AS YOU COMPLETE 'FLESH FOR SALE' BEFORE STARTING 'FOLLOWING THE THREAD', THEN YOU CAN TRAVEL TO SKELLIGE WHEN YOU ARE READY."
+
+const val storyBranchMarker = "STORY BRANCH "
+const val anyOrderStartMarker = "THE FOLLOWING QUESTS CAN BE DONE AT ANY TIME IN ANY ORDER"
+const val considerIgnoringNextMarker =
+    "THE FOLLOWING QUEST IS NOT WORTH DOING CONSIDERING HOW OUT OF ORDER YOU WILL HAVE TO DO CERTAIN QUESTS."
+const val theOnlyReasonMarker = "THE ONLY REASON THAT 'DESTINATION: SKELLIGE'"
 
 interface DataExtractor {
     fun extractData(): List<Quest>
@@ -29,22 +44,79 @@ class ExcelExtractor(
 
     private val workbook: Workbook = WorkbookFactory.create(inputStream)
 
+    fun extractSheet(): List<QuestComplete> {
+        val sheet = workbook.getSheetAt(1)
+        return extractSheet(sheet)
+    }
+
+    private fun extractSheet(sheet: Sheet): List<QuestComplete> {
+        val quests = mutableMapOf<QuestKey, QuestValue>()
+
+        var previousLocation: String? = null
+        var previousName: String? = null
+        var previousDetail: String? = null
+
+        var anyOrder = false
+        var emptyRowCount = 0
+
+        for (row in sheet.iterator().asSequence()
+            .filter { it.rowNum >= startRow && it.rowNum < 39 }) {
+            if (isRowBlank(row)) {
+                emptyRowCount++
+                if (emptyRowCount == 2) anyOrder = false
+                continue
+            }
+            emptyRowCount = 0
+
+            if (row.containsString(anyOrderStartMarker)) {
+                anyOrder = true
+                continue
+            }
+
+            val location = row.getValueAt(0) ?: previousLocation
+            val name = row.getValueAt(1) ?: previousName
+            val extra = row.getValueAt(3)?.let { listOf(ExtraDetail(it)) } ?: emptyList()
+
+            // println("${(location ?: "").padEnd(5)} ${(name ?: "").padEnd(10)}, ${extra.firstOrNull()}")
+
+            if (location != null && name != null) {
+                val key = QuestKey(
+                    location,
+                    name,
+                    if (anyOrder) Order.Any else Order.Suggested(0),
+                )
+
+                if (quests.contains(key)) {
+                    val questValue = quests[key]!!
+                    quests[key] = questValue.copy(extras = questValue.extras + extra)
+                } else {
+                    quests[key] = QuestValue(
+                        id = row.rowNum + 1,
+                        extras = extra
+                    )
+                }
+
+                previousLocation = location
+                previousName = name
+            } else if (extra.isNotEmpty() && quests.isNotEmpty()) {
+                //val lastQuest = quests.last()
+                //quests[quests.lastIndex] = lastQuest.copy(details = lastQuest.details + details)
+                println("lol")
+            }
+        }
+        return quests.map { (key, value) ->
+            QuestComplete(
+                value.id,
+                key.location,
+                key.name,
+                key.order,
+                value.extras,
+            )
+        }
+    }
+
     override fun extractData(): List<Quest> {
         val sheet = workbook.getSheetAt(1)
-
-        // Define the starting row and column range (A to G corresponds to 0 to 6 in zero-based indexing)
-        val startRow = 9 // Row 10 (index 9)
-        val startCol = 0 // Column A (index 0)
-        val endCol = 6   // Column G (index 6)
-
-        val theOnlyReasonMessage =
-            "THE ONLY REASON THAT 'DESTINATION: SKELLIGE' IS PLACED HERE IS BECAUSE 'FLESH FOR SALE' IS EASILY MISSABLE AND THE ONLY WAY TO DO IT IS IN SKELLIGE. AS LONG AS YOU COMPLETE 'FLESH FOR SALE' BEFORE STARTING 'FOLLOWING THE THREAD', THEN YOU CAN TRAVEL TO SKELLIGE WHEN YOU ARE READY."
-
-        val storyBranchMarker = "STORY BRANCH "
-        val noOrderStartMarker = "THE FOLLOWING QUESTS CAN BE DONE AT ANY TIME IN ANY ORDER"
-        val considerIgnoringNextMarker =
-            "THE FOLLOWING QUEST IS NOT WORTH DOING CONSIDERING HOW OUT OF ORDER YOU WILL HAVE TO DO CERTAIN QUESTS."
-        val theOnlyReasonMarker = "THE ONLY REASON THAT 'DESTINATION: SKELLIGE'"
 
         var anyOrder = false
         var consecutiveBlankRows = 0
@@ -84,7 +156,7 @@ class ExcelExtractor(
                     val cellValue = getCellValue(cell)
 
                     // Detect start marker
-                    if (cellValue == noOrderStartMarker) {
+                    if (cellValue == anyOrderStartMarker) {
                         storyBranch = null
                         anyOrder = true
                         consecutiveBlankRows = 0
@@ -249,6 +321,19 @@ fun isRowBlank(row: Row): Boolean {
     return true
 }
 
+fun Row.containsString(str: String): Boolean {
+    for (cell in this) {
+        val cellValue = getCellValue(cell)
+        if (cellValue.isNullOrBlank()) return false
+
+        if (cellValue.contains(str) || str.contains(cellValue)) {
+            return true
+        }
+    }
+    return false
+}
+
+
 // Helper function to get the cell's background color as a hex string
 fun getCellColor(cell: Cell): String? {
     return when (val cellStyle: CellStyle = cell.cellStyle) {
@@ -259,6 +344,11 @@ fun getCellColor(cell: Cell): String? {
 
         else -> null
     }
+}
+
+fun Row.getValueAt(int: Int): String? {
+    val cell = getCell(int, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK)
+    return getCellValue(cell)
 }
 
 // Helper function to get the value of a cell as a string
@@ -285,6 +375,38 @@ private fun extractLevel(input: String): Pair<String, Level> {
     val levelObj = if (level == null) Level.Any else Level.Suggested(level)
     return Pair(firstPart, levelObj)
 }
+
+data class QuestKey(
+    val location: String,
+    val name: String,
+//    val color: String,
+//    val link: String,
+//    val level: Level,
+    val order: Order,
+//    val considerIgnoring: Boolean,
+//    val storyBranch: String?,
+//    val theOnlyReasonMessage: String?,
+)
+
+data class QuestComplete(
+    val id: Int,
+    val location: String,
+    val name: String,
+    val order: Order,
+    val extraDetails: List<ExtraDetail>,
+//    val color: String,
+//    val link: String,
+//    val level: Level,
+//    val order: Order,
+//    val considerIgnoring: Boolean,
+//    val storyBranch: String?,
+//    val theOnlyReasonMessage: String?,
+)
+
+private data class QuestValue(
+    val id: Int,
+    val extras: List<ExtraDetail>,
+)
 
 private data class QuestRaw(
     val questInfo: QuestInfo,

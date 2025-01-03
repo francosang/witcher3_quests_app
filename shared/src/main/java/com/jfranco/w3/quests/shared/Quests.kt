@@ -127,8 +127,8 @@ data class Quest(
 @Serializable
 data class ExtraDetail(
     val detail: String,
-    val link: String?,
-    val isCompleted: Boolean,
+    val link: String? = null,
+    val isCompleted: Boolean = false,
 )
 
 @Serializable
