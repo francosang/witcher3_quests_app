@@ -24,12 +24,15 @@ const val startRow = 9 // Row 10 (index 9)
 const val startCol = 0 // Column A (index 0)
 const val endCol = 6   // Column G (index 6)
 
-const val theOnlyReasonMessage =
+const val skelligeMessage =
     "THE ONLY REASON THAT 'DESTINATION: SKELLIGE' IS PLACED HERE IS BECAUSE 'FLESH FOR SALE' IS EASILY MISSABLE AND THE ONLY WAY TO DO IT IS IN SKELLIGE. AS LONG AS YOU COMPLETE 'FLESH FOR SALE' BEFORE STARTING 'FOLLOWING THE THREAD', THEN YOU CAN TRAVEL TO SKELLIGE WHEN YOU ARE READY."
+
+const val considerIgnoringMessage =
+    "THE FOLLOWING QUEST IS NOT WORTH DOING CONSIDERING HOW OUT OF ORDER YOU WILL HAVE TO DO CERTAIN QUESTS. IT IS SIMPLY A 3 MINUTE BIT OF DIALOGUE AND THAT IS IT. IF YOU WOULD LIKE TO WATCH IT, I'VE ATTACHED A YOUTUBE CLIP OF THE QUEST ITSELF IN THE EXTRA DETAILS LINK. I'VE ONLY ADDED IT HERE IN CASE SOMEONE DID WANT TO DO IT."
 
 const val storyBranchMarker = "STORY BRANCH "
 const val anyOrderStartMarker = "THE FOLLOWING QUESTS CAN BE DONE AT ANY TIME IN ANY ORDER"
-const val considerIgnoringNextMarker =
+const val considerIgnoringMarker =
     "THE FOLLOWING QUEST IS NOT WORTH DOING CONSIDERING HOW OUT OF ORDER YOU WILL HAVE TO DO CERTAIN QUESTS."
 const val theOnlyReasonMarker = "THE ONLY REASON THAT 'DESTINATION: SKELLIGE'"
 
@@ -54,24 +57,35 @@ class ExcelExtractor(
 
         var previousLocation: String? = null
         var previousName: String? = null
-        var previousDetail: String? = null
+        var message: String? = null
 
         var anyOrder = false
+        var considerIgnoring = false
         var emptyRowCount = 0
 
         for (row in sheet.iterator().asSequence()
             .filter { it.rowNum >= startRow }) {
-            if (isRowBlank(row)) {
-                emptyRowCount++
-                if (emptyRowCount == 2) anyOrder = false
-                continue
-            }
-            emptyRowCount = 0
 
             if (row.containsString(anyOrderStartMarker)) {
                 anyOrder = true
                 continue
+            } else if (row.containsString(theOnlyReasonMarker)) {
+                message = skelligeMessage
+                continue
+            } else if (row.containsString(considerIgnoringMarker)) {
+                considerIgnoring = true
+                message = considerIgnoringMessage
+                continue
+            } else if (isRowBlank(row)) {
+                emptyRowCount++
+                if (emptyRowCount == 2) {
+                    considerIgnoring = false
+                    anyOrder = false
+                    message = null
+                }
+                continue
             }
+            emptyRowCount = 0
 
             val location = row.getValueAt(0) ?: previousLocation
             val name = row.getValueAt(1) ?: previousName
@@ -84,10 +98,12 @@ class ExcelExtractor(
                 val (quest, level) = extractLevel(name)
 
                 val key = QuestKey(
-                    location,
-                    quest,
-                    level,
-                    if (anyOrder) Order.Any else Order.Suggested(0),
+                    location = location,
+                    name = quest,
+                    level = level,
+                    order = if (anyOrder) Order.Any else Order.Suggested(0),
+                    message = message,
+                    considerIgnoring = considerIgnoring
                 )
 
                 if (quests.contains(key)) {
@@ -103,19 +119,19 @@ class ExcelExtractor(
                 previousLocation = location
                 previousName = name
             } else if (extra.isNotEmpty() && quests.isNotEmpty()) {
-                //val lastQuest = quests.last()
-                //quests[quests.lastIndex] = lastQuest.copy(details = lastQuest.details + details)
-                println("lol")
+                throw RuntimeException("Why am I here?")
             }
         }
         return quests.map { (key, value) ->
             QuestComplete(
-                value.id,
-                key.location,
-                key.name,
-                key.level,
-                key.order,
-                value.extras,
+                id = value.id,
+                location = key.location,
+                name = key.name,
+                level = key.level,
+                order = key.order,
+                extraDetails = value.extras,
+                considerIgnoring = key.considerIgnoring,
+                message = key.message,
             )
         }
     }
@@ -169,7 +185,7 @@ class ExcelExtractor(
                     } else if (cellValue?.contains(storyBranchMarker) == true) {
                         storyBranch = cellValue
                         continue
-                    } else if (cellValue?.contains(considerIgnoringNextMarker) == true) {
+                    } else if (cellValue?.contains(considerIgnoringMarker) == true) {
                         considerIgnoringCounter = 1
                         continue
                     } else if (cellValue?.contains(theOnlyReasonMarker) == true) {
@@ -251,7 +267,7 @@ class ExcelExtractor(
                 }
 
                 val msg =
-                    if (theOnlyReasonCounter > 0 && theOnlyReasonCounter < 7) theOnlyReasonMessage else null
+                    if (theOnlyReasonCounter > 0 && theOnlyReasonCounter < 7) skelligeMessage else null
 
                 val (name, level) = extractLevel(questName!!)
 
@@ -331,7 +347,7 @@ fun Row.containsString(str: String): Boolean {
         val cellValue = getCellValue(cell)
         if (cellValue.isNullOrBlank()) return false
 
-        if (cellValue.contains(str) || str.contains(cellValue)) {
+        if (cellValue.contains(str)) {
             return true
         }
     }
@@ -388,9 +404,9 @@ data class QuestKey(
     val order: Order,
 //    val color: String,
 //    val link: String,
-//    val considerIgnoring: Boolean,
+    val considerIgnoring: Boolean,
 //    val storyBranch: String?,
-//    val theOnlyReasonMessage: String?,
+    val message: String?,
 )
 
 data class QuestComplete(
@@ -403,9 +419,9 @@ data class QuestComplete(
     val extraDetails: List<ExtraDetail>,
 //    val color: String,
 //    val order: Order,
-//    val considerIgnoring: Boolean,
+    val considerIgnoring: Boolean,
 //    val storyBranch: String?,
-//    val theOnlyReasonMessage: String?,
+    val message: String?,
 )
 
 private data class QuestValue(

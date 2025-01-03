@@ -1,8 +1,6 @@
 package com.jfranco.witcher3.quests.cli
 
-import com.jfranco.w3.quests.shared.ExtraDetail
 import com.jfranco.w3.quests.shared.Level
-import com.jfranco.w3.quests.shared.Order
 import java.io.FileInputStream
 
 fun main() = xlsx()
@@ -13,19 +11,7 @@ fun xlsx() {
     val repo = FileInputStream(filePath)
         .use(::ExcelExtractor)
 
-//    val sheet = listOf(
-//        listOf("kaer", "ciri", null),
-//        listOf("white", "fire", "d1"),
-//        listOf(null, null, "d2"),
-//        listOf(null, "inci", "d3"),
-//        listOf("any"),
-//        listOf("white", "card", null),
-//        listOf(),
-//        listOf(),
-//        listOf("velen", "blood", "d5"),
-//    )
     val quests = repo.extractSheet()
-    quests.forEach { println(it) }
 
     quests
         .groupBy { it.id }
@@ -40,7 +26,6 @@ fun xlsx() {
     if (quests.groupBy { it.hashCode() }.any { it.value.size > 1 }) {
         throw IllegalStateException("There are duplicated quests")
     }
-
 
     fun validateQuest(name: String, id: Int, level: Level, extrasSize: Int, message: String?) {
         val filtered = quests.filter { it.name == name }
@@ -61,8 +46,8 @@ fun xlsx() {
                 throw IllegalStateException("Quest has level ${it.level}, but expected $level")
             }
 
-//                if (message != null)
-//                    throw IllegalStateException("Quest has message ${message}, but expected null")
+            if (it.message != message)
+                throw IllegalStateException("Quest has message ${message}, but expected null")
 
             if (it.extraDetails.size != extrasSize) {
                 val msg =
@@ -80,7 +65,15 @@ fun xlsx() {
         281,
         Level.Suggested(16),
         extrasSize = 4,
-        message = theOnlyReasonMessage
+        message = skelligeMessage
+    )
+
+    validateQuest(
+        "The Mysterious Passenger",
+        97,
+        Level.Suggested(1),
+        extrasSize = 1,
+        message = considerIgnoringMessage
     )
 
 //    val quests = repo.extractData()
