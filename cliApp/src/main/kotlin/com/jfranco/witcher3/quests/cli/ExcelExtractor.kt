@@ -6,6 +6,8 @@ import com.jfranco.w3.quests.shared.Order
 import com.jfranco.w3.quests.shared.Quest
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import org.apache.poi.hssf.usermodel.HSSFCellStyle
+import org.apache.poi.hssf.util.HSSFColor
 import org.apache.poi.ss.usermodel.Cell
 import org.apache.poi.ss.usermodel.CellStyle
 import org.apache.poi.ss.usermodel.CellType
@@ -59,6 +61,7 @@ class ExcelExtractor(
         var previousName: String? = null
         var message: String? = null
         var previousLink: String? = null
+        var previousColor: String? = null
 
         var anyOrder = false
         var considerIgnoring = false
@@ -91,12 +94,12 @@ class ExcelExtractor(
             val location = row.getValueAt(0) ?: previousLocation
             val name = row.getValueAt(1) ?: previousName
             val link = row.getLinkAddressAt(1) ?: previousLink
+            val color = row.getColorAt(1) ?: previousColor
             val extra = row.getValueAt(3)?.let { listOf(ExtraDetail(it)) } ?: emptyList()
 
             // println("${(location ?: "").padEnd(5)} ${(name ?: "").padEnd(10)}, ${extra.firstOrNull()}")
 
             if (location != null && name != null) {
-
                 val (quest, level) = extractLevel(name)
 
                 val key = QuestKey(
@@ -105,6 +108,7 @@ class ExcelExtractor(
                     link = link!!,
                     level = level,
                     order = if (anyOrder) Order.Any else Order.Suggested(0),
+                    color = color!!,
                     message = message,
                     considerIgnoring = considerIgnoring
                 )
@@ -122,6 +126,7 @@ class ExcelExtractor(
                 previousLocation = location
                 previousName = name
                 previousLink = link
+                previousColor = color
             } else if (extra.isNotEmpty() && quests.isNotEmpty()) {
                 throw RuntimeException("Why am I here?")
             }
@@ -131,6 +136,7 @@ class ExcelExtractor(
                 id = value.id,
                 location = key.location,
                 name = key.name,
+                color = key.color,
                 link = key.link,
                 level = key.level,
                 order = key.order,
@@ -364,7 +370,8 @@ fun Row.containsString(str: String): Boolean {
 fun getCellColor(cell: Cell): String? {
     return when (val cellStyle: CellStyle = cell.cellStyle) {
         is XSSFCellStyle -> { // For .xlsx files
-            val xssfColor: XSSFColor? = cellStyle.fillForegroundColorColor
+            val xssfColor: XSSFColor? =
+                cellStyle.fillBackgroundColorColor // fillForegroundColorColor
             xssfColor?.rgb?.joinToString("") { "%02x".format(it) }
         }
 
@@ -380,6 +387,11 @@ fun Row.getValueAt(int: Int): String? {
 fun Row.getLinkAddressAt(int: Int): String? {
     val cell = getCell(int, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK)
     return cell?.hyperlink?.address
+}
+
+fun Row.getColorAt(int: Int): String? {
+    val cell = getCell(int, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK)
+    return getCellColor(cell)
 }
 
 // Helper function to get the value of a cell as a string
@@ -412,7 +424,7 @@ data class QuestKey(
     val name: String,
     val level: Level,
     val order: Order,
-//    val color: String,
+    val color: String,
     val link: String,
     val considerIgnoring: Boolean,
 //    val storyBranch: String?,
@@ -427,7 +439,7 @@ data class QuestComplete(
     val link: String,
     val order: Order,
     val extraDetails: List<ExtraDetail>,
-//    val color: String,
+    val color: String,
 //    val order: Order,
     val considerIgnoring: Boolean,
 //    val storyBranch: String?,

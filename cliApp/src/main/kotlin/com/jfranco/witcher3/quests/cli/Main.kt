@@ -92,8 +92,6 @@ fun xlsx() {
         Level.Suggested(38), extrasSize = 2, message = null
     )
 
-    //  (38)
-
 //    val quests = repo.extractData()
 //
 //    repo.write(

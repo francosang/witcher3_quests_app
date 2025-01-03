@@ -15,12 +15,6 @@ data class QuestGroup(
     val quests: List<Quest>
 )
 
-enum class QuestsCompleted {
-    LOADING,
-    SHOWING,
-    HIDDEN
-}
-
 @Serializable
 sealed class Level {
     @Serializable
