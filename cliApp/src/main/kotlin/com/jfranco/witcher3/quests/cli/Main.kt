@@ -1,6 +1,7 @@
 package com.jfranco.witcher3.quests.cli
 
 import com.jfranco.w3.quests.shared.ExtraDetail
+import com.jfranco.w3.quests.shared.Level
 import com.jfranco.w3.quests.shared.Order
 import java.io.FileInputStream
 
@@ -40,28 +41,47 @@ fun xlsx() {
         throw IllegalStateException("There are duplicated quests")
     }
 
-    fun validateQuest(name: String, id: Int, extrasSize: Int, message: String?) {
-        if (quests.filter { it.name.contains(name) }.map {
-                if (it.id != id) throw IllegalStateException("Quest has id ${it.id}, but expected $id")
+
+    fun validateQuest(name: String, id: Int, level: Level, extrasSize: Int, message: String?) {
+        val filtered = quests.filter { it.name == name }
+        if (filtered.isEmpty())
+            throw IllegalStateException("$name not found")
+
+        if (filtered.groupBy { it.name }.any { it.value.size > 1 })
+            throw IllegalStateException("$name is not unique")
+
+        filtered.forEach {
+            if (it.id != id) {
+                println(it)
+                throw IllegalStateException("Quest has id ${it.id}, but expected $id")
+            }
+
+            if (it.level != level) {
+                println(it)
+                throw IllegalStateException("Quest has level ${it.level}, but expected $level")
+            }
 
 //                if (message != null)
 //                    throw IllegalStateException("Quest has message ${message}, but expected null")
 
-                if (it.extraDetails.size != extrasSize) {
-                    val msg =
-                        "Quest has ${it.extraDetails.size} extra details, but expected $extrasSize"
-                    println(msg)
-                    it.extraDetails.forEach { d -> println("\t$d") }
-                    throw IllegalStateException(msg)
-                }
-                it
-            }.groupBy { it.name }.any { it.value.size > 1 })
-            throw IllegalStateException("$name is duplicated")
-
+            if (it.extraDetails.size != extrasSize) {
+                val msg =
+                    "Quest has ${it.extraDetails.size} extra details, but expected $extrasSize"
+                println(msg)
+                it.extraDetails.forEach { d -> println("\t$d") }
+                throw IllegalStateException(msg)
+            }
+        }
     }
 
-    validateQuest("Kaer Morhen", id = 10, extrasSize = 9, message = null)
-    validateQuest("Destination: Skellige", id = 281, extrasSize = 4, message = theOnlyReasonMessage)
+    validateQuest("Kaer Morhen", 10, Level.Suggested(1), extrasSize = 9, message = null)
+    validateQuest(
+        "Destination: Skellige",
+        281,
+        Level.Suggested(16),
+        extrasSize = 4,
+        message = theOnlyReasonMessage
+    )
 
 //    val quests = repo.extractData()
 //

@@ -60,7 +60,7 @@ class ExcelExtractor(
         var emptyRowCount = 0
 
         for (row in sheet.iterator().asSequence()
-            .filter { it.rowNum >= startRow && it.rowNum < 39 }) {
+            .filter { it.rowNum >= startRow }) {
             if (isRowBlank(row)) {
                 emptyRowCount++
                 if (emptyRowCount == 2) anyOrder = false
@@ -80,9 +80,13 @@ class ExcelExtractor(
             // println("${(location ?: "").padEnd(5)} ${(name ?: "").padEnd(10)}, ${extra.firstOrNull()}")
 
             if (location != null && name != null) {
+
+                val (quest, level) = extractLevel(name)
+
                 val key = QuestKey(
                     location,
-                    name,
+                    quest,
+                    level,
                     if (anyOrder) Order.Any else Order.Suggested(0),
                 )
 
@@ -109,6 +113,7 @@ class ExcelExtractor(
                 value.id,
                 key.location,
                 key.name,
+                key.level,
                 key.order,
                 value.extras,
             )
@@ -379,10 +384,10 @@ private fun extractLevel(input: String): Pair<String, Level> {
 data class QuestKey(
     val location: String,
     val name: String,
+    val level: Level,
+    val order: Order,
 //    val color: String,
 //    val link: String,
-//    val level: Level,
-    val order: Order,
 //    val considerIgnoring: Boolean,
 //    val storyBranch: String?,
 //    val theOnlyReasonMessage: String?,
@@ -392,11 +397,11 @@ data class QuestComplete(
     val id: Int,
     val location: String,
     val name: String,
+    val level: Level,
+//    val link: String,
     val order: Order,
     val extraDetails: List<ExtraDetail>,
 //    val color: String,
-//    val link: String,
-//    val level: Level,
 //    val order: Order,
 //    val considerIgnoring: Boolean,
 //    val storyBranch: String?,
