@@ -58,6 +58,7 @@ class ExcelExtractor(
         var previousLocation: String? = null
         var previousName: String? = null
         var message: String? = null
+        var previousLink: String? = null
 
         var anyOrder = false
         var considerIgnoring = false
@@ -89,6 +90,7 @@ class ExcelExtractor(
 
             val location = row.getValueAt(0) ?: previousLocation
             val name = row.getValueAt(1) ?: previousName
+            val link = row.getLinkAddressAt(1) ?: previousLink
             val extra = row.getValueAt(3)?.let { listOf(ExtraDetail(it)) } ?: emptyList()
 
             // println("${(location ?: "").padEnd(5)} ${(name ?: "").padEnd(10)}, ${extra.firstOrNull()}")
@@ -100,6 +102,7 @@ class ExcelExtractor(
                 val key = QuestKey(
                     location = location,
                     name = quest,
+                    link = link!!,
                     level = level,
                     order = if (anyOrder) Order.Any else Order.Suggested(0),
                     message = message,
@@ -118,6 +121,7 @@ class ExcelExtractor(
 
                 previousLocation = location
                 previousName = name
+                previousLink = link
             } else if (extra.isNotEmpty() && quests.isNotEmpty()) {
                 throw RuntimeException("Why am I here?")
             }
@@ -127,6 +131,7 @@ class ExcelExtractor(
                 id = value.id,
                 location = key.location,
                 name = key.name,
+                link = key.link,
                 level = key.level,
                 order = key.order,
                 extraDetails = value.extras,
@@ -372,6 +377,11 @@ fun Row.getValueAt(int: Int): String? {
     return getCellValue(cell)
 }
 
+fun Row.getLinkAddressAt(int: Int): String? {
+    val cell = getCell(int, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK)
+    return cell?.hyperlink?.address
+}
+
 // Helper function to get the value of a cell as a string
 fun getCellValue(cell: Cell): String? {
     return when (cell.cellType) {
@@ -403,7 +413,7 @@ data class QuestKey(
     val level: Level,
     val order: Order,
 //    val color: String,
-//    val link: String,
+    val link: String,
     val considerIgnoring: Boolean,
 //    val storyBranch: String?,
     val message: String?,
@@ -414,7 +424,7 @@ data class QuestComplete(
     val location: String,
     val name: String,
     val level: Level,
-//    val link: String,
+    val link: String,
     val order: Order,
     val extraDetails: List<ExtraDetail>,
 //    val color: String,

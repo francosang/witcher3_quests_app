@@ -27,7 +27,14 @@ fun xlsx() {
         throw IllegalStateException("There are duplicated quests")
     }
 
-    fun validateQuest(name: String, id: Int, level: Level, extrasSize: Int, message: String?) {
+    fun validateQuest(
+        name: String,
+        id: Int,
+        link: String,
+        level: Level,
+        extrasSize: Int,
+        message: String?
+    ) {
         val filtered = quests.filter { it.name == name }
         if (filtered.isEmpty())
             throw IllegalStateException("$name not found")
@@ -39,6 +46,11 @@ fun xlsx() {
             if (it.id != id) {
                 println(it)
                 throw IllegalStateException("Quest has id ${it.id}, but expected $id")
+            }
+
+            if (it.link != link) {
+                println(it)
+                throw IllegalStateException("Quest has link ${it.link}, but expected $link")
             }
 
             if (it.level != level) {
@@ -59,22 +71,28 @@ fun xlsx() {
         }
     }
 
-    validateQuest("Kaer Morhen", 10, Level.Suggested(1), extrasSize = 9, message = null)
     validateQuest(
-        "Destination: Skellige",
-        281,
-        Level.Suggested(16),
-        extrasSize = 4,
-        message = skelligeMessage
+        "Kaer Morhen", 10,
+        "https://witcher.fandom.com/wiki/Kaer_Morhen_(quest)?so=search",
+        Level.Suggested(1), extrasSize = 9, message = null
+    )
+    validateQuest(
+        "Destination: Skellige", 281,
+        "https://witcher.fandom.com/wiki/Destination:_Skellige?so=search",
+        Level.Suggested(16), extrasSize = 4, message = skelligeMessage
+    )
+    validateQuest(
+        "The Mysterious Passenger", 97,
+        "https://witcher.fandom.com/wiki/A_Mysterious_Passenger",
+        Level.Suggested(1), extrasSize = 1, message = considerIgnoringMessage
+    )
+    validateQuest(
+        "Gwent: To Everything - Turn, Turn, Tournament!", 982,
+        "https://witcher.fandom.com/wiki/Gwent:_To_Everything_-_Turn,_Turn,_Tournament!?so=search",
+        Level.Suggested(38), extrasSize = 2, message = null
     )
 
-    validateQuest(
-        "The Mysterious Passenger",
-        97,
-        Level.Suggested(1),
-        extrasSize = 1,
-        message = considerIgnoringMessage
-    )
+    //  (38)
 
 //    val quests = repo.extractData()
 //
