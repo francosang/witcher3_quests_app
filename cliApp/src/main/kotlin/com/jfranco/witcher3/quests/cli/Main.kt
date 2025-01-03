@@ -11,7 +11,7 @@ fun xlsx() {
     val repo = FileInputStream(filePath)
         .use(::ExcelExtractor)
 
-    val quests = repo.extractSheet()
+    val quests = repo.extractData()
 
     quests
         .groupBy { it.id }
@@ -19,7 +19,7 @@ fun xlsx() {
         .forEach { g ->
             println("> Quest with id ${g.key} is duplicated: ${g.value.size} times")
             g.value.forEach {
-                println("----- (${it.extraDetails.size}) - ${it.name}")
+                println("----- (${it.extraDetails.size}) - ${it.quest}")
             }
         }
 
@@ -33,14 +33,11 @@ fun xlsx() {
         link: String,
         level: Level,
         extrasSize: Int,
-        message: String?
+        message: String?,
     ) {
-        val filtered = quests.filter { it.name == name }
-        if (filtered.isEmpty())
-            throw IllegalStateException("$name not found")
-
-        if (filtered.groupBy { it.name }.any { it.value.size > 1 })
-            throw IllegalStateException("$name is not unique")
+        val filtered = quests.filter { it.quest == name }
+        if (filtered.size != 1)
+            throw IllegalStateException("Expected only one quests with name $name, but found ${filtered.size}")
 
         filtered.forEach {
             if (it.id != id) {
@@ -48,18 +45,18 @@ fun xlsx() {
                 throw IllegalStateException("Quest has id ${it.id}, but expected $id")
             }
 
-            if (it.link != link) {
+            if (it.url != link) {
                 println(it)
-                throw IllegalStateException("Quest has link ${it.link}, but expected $link")
+                throw IllegalStateException("Quest has link ${it.url}, but expected $link")
             }
 
-            if (it.level != level) {
+            if (it.suggested != level) {
                 println(it)
-                throw IllegalStateException("Quest has level ${it.level}, but expected $level")
+                throw IllegalStateException("Quest has level ${it.suggested}, but expected $level")
             }
 
             if (it.message != message)
-                throw IllegalStateException("Quest has message ${message}, but expected null")
+                throw IllegalStateException("Quest has message ${it.message}, but expected $message")
 
             if (it.extraDetails.size != extrasSize) {
                 val msg =
@@ -67,6 +64,47 @@ fun xlsx() {
                 println(msg)
                 it.extraDetails.forEach { d -> println("\t$d") }
                 throw IllegalStateException(msg)
+            }
+        }
+    }
+
+    fun validateQuest(
+        names: List<Triple<String, Int, String?>>,
+        link: String,
+        level: Level,
+        extrasSize: Int,
+    ) {
+        names.forEach { (name, id, storyBranch) ->
+            val filtered = quests.filter { it.quest == name && it.id == id }
+            if (filtered.size != 1)
+                throw IllegalStateException("Expected only one quests with name $name, but found ${filtered.size}")
+
+            filtered.forEach {
+                if (it.id != id) {
+                    println(it)
+                    throw IllegalStateException("Quest has id ${it.id}, but expected $id")
+                }
+
+                if (it.url != link) {
+                    println(it)
+                    throw IllegalStateException("Quest has link ${it.url}, but expected $link")
+                }
+
+                if (it.suggested != level) {
+                    println(it)
+                    throw IllegalStateException("Quest has level ${it.suggested}, but expected $level")
+                }
+
+                if (it.branch != storyBranch)
+                    throw IllegalStateException("Quest has message ${it.branch}, but expected $storyBranch")
+
+                if (it.extraDetails.size != extrasSize) {
+                    val msg =
+                        "Quest has ${it.extraDetails.size} extra details, but expected $extrasSize"
+                    println(msg)
+                    it.extraDetails.forEach { d -> println("\t$d") }
+                    throw IllegalStateException(msg)
+                }
             }
         }
     }
@@ -91,11 +129,18 @@ fun xlsx() {
         "https://witcher.fandom.com/wiki/Gwent:_To_Everything_-_Turn,_Turn,_Tournament!?so=search",
         Level.Suggested(38), extrasSize = 2, message = null
     )
+    validateQuest(
+        listOf(
+            Triple("Be It Ever So Humble...", 897, "STORY BRANCH 1"),
+            Triple("Be It Ever So Humble...", 915, "STORY BRANCH 2")
+        ),
+        "https://witcher.fandom.com/wiki/Be_It_Ever_So_Humble...?so=search",
+        Level.Suggested(49), extrasSize = 4,
+    )
 
-//    val quests = repo.extractData()
-//
-//    repo.write(
-//        quests,
-//        "/Users/f.sangiacomo/FranCode/witcher3_quests/androidApp/src/main/res/raw/quests.json"
-//    )
+    repo.write(
+        quests,
+        "/Users/f.sangiacomo/FranCode/witcher3_quests/androidApp/src/main/res/raw/quests.json"
+    )
 }
+

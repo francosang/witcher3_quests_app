@@ -104,7 +104,7 @@ fun QuestCard(
                         Modifier.padding(start = contentPadding / 2)
                     ) {
                         Text(
-                            text = quest.type.type,
+                            text = quest.color,
                             style = MaterialTheme.typography.bodySmall,
                         )
                         Text(
@@ -205,7 +205,6 @@ fun QuestsCompletedPreview() {
     val sampleQuest = Quest(
         id = 1,
         quest = "Sample Quest",
-        type = Type.Main,
         isCompleted = true,
         extraDetails = listOf(
             ExtraDetail("Detail 1", null, false),
@@ -215,7 +214,10 @@ fun QuestsCompletedPreview() {
         suggested = Level.Any,
         url = "url",
         branch = null,
-        order = Order.Suggested(1)
+        order = Order.Suggested(1),
+        color = "",
+        considerIgnoring = false,
+        message = null
     )
     AppTheme(
         useDarkTheme = false
@@ -245,7 +247,6 @@ fun QuestsOpenPreview() {
     val sampleQuest = Quest(
         id = 1,
         quest = "Sample Quest",
-        type = Type.Main,
         isCompleted = false,
         extraDetails = listOf(
             ExtraDetail("Detail 1", null, false),
@@ -255,7 +256,10 @@ fun QuestsOpenPreview() {
         suggested = Level.Any,
         url = "url",
         branch = null,
-        order = Order.Suggested(1)
+        order = Order.Suggested(1),
+        color = "",
+        considerIgnoring = false,
+        message = null
     )
 
     AppTheme(

@@ -112,10 +112,12 @@ data class Quest(
     val isCompleted: Boolean,
     val suggested: Level,
     val url: String,
-    val branch: String?,
     val order: Order,
+    val color: String,
     val extraDetails: List<ExtraDetail>,
-    val type: Type = Type.Main
+    val considerIgnoring: Boolean,
+    val branch: String?,
+    val message: String?,
 )
 
 @Serializable

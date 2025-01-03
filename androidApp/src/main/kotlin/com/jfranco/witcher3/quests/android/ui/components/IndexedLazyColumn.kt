@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
+import androidx.compose.ui.unit.center
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -51,9 +52,24 @@ class IndexedLazyListState internal constructor(
         itemIndexMapping[key] = index
     }
 
-    internal suspend fun animateScrollToItem(key: Any) {
+    suspend fun animateScrollToItem(key: Any) {
         val index = itemIndexMapping[key] ?: return
         listState.animateScrollToItem(index)
+
+        animateScrollAndCentralizeItem(key)
+    }
+
+    private suspend fun animateScrollAndCentralizeItem(key: Any) {
+        val index = itemIndexMapping[key] ?: return
+
+        val itemInfo = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }
+        if (itemInfo != null) {
+            val center = listState.layoutInfo.viewportEndOffset / 2
+            val childCenter = itemInfo.offset + itemInfo.size / 2
+            listState.animateScrollBy((childCenter - center).toFloat())
+        } else {
+            listState.animateScrollToItem(index)
+        }
     }
 }
 

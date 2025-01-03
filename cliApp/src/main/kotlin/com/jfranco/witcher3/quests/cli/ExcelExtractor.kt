@@ -49,23 +49,23 @@ class ExcelExtractor(
 
     private val workbook: Workbook = WorkbookFactory.create(inputStream)
 
-    fun extractSheet(): List<QuestComplete> {
+    override fun extractData(): List<Quest> {
         val sheet = workbook.getSheetAt(1)
-        return extractSheet(sheet)
-    }
 
-    private fun extractSheet(sheet: Sheet): List<QuestComplete> {
         val quests = mutableMapOf<QuestKey, QuestValue>()
 
+        // these are the field values of the quests, they are updated while iterating the sheet
         var previousLocation: String? = null
         var previousName: String? = null
         var message: String? = null
         var previousLink: String? = null
         var previousColor: String? = null
 
+        // These values are control flags for markers, they are handled different than field values
         var anyOrder = false
         var considerIgnoring = false
         var emptyRowCount = 0
+        var storyBranch: String? = null
 
         for (row in sheet.iterator().asSequence()
             .filter { it.rowNum >= startRow }) {
@@ -80,12 +80,16 @@ class ExcelExtractor(
                 considerIgnoring = true
                 message = considerIgnoringMessage
                 continue
+            } else if (row.containsString(storyBranchMarker)) {
+                storyBranch = row.getCell(0).stringCellValue
+                continue
             } else if (isRowBlank(row)) {
                 emptyRowCount++
                 if (emptyRowCount == 2) {
                     considerIgnoring = false
                     anyOrder = false
                     message = null
+                    storyBranch = null
                 }
                 continue
             }
@@ -110,6 +114,7 @@ class ExcelExtractor(
                     order = if (anyOrder) Order.Any else Order.Suggested(0),
                     color = color!!,
                     message = message,
+                    storyBranch = storyBranch,
                     considerIgnoring = considerIgnoring
                 )
 
@@ -132,207 +137,209 @@ class ExcelExtractor(
             }
         }
         return quests.map { (key, value) ->
-            QuestComplete(
+            Quest(
                 id = value.id,
                 location = key.location,
-                name = key.name,
+                quest = key.name,
                 color = key.color,
-                link = key.link,
-                level = key.level,
+                isCompleted = false,
+                url = key.link,
+                suggested = key.level,
                 order = key.order,
                 extraDetails = value.extras,
                 considerIgnoring = key.considerIgnoring,
+                branch = key.storyBranch,
                 message = key.message,
             )
         }
     }
 
-    override fun extractData(): List<Quest> {
-        val sheet = workbook.getSheetAt(1)
-
-        var anyOrder = false
-        var consecutiveBlankRows = 0
-        var considerIgnoringCounter = -1
-        var theOnlyReasonCounter = -1
-
-        var id: Int? = null
-        var orderIndex = 0
-
-        var location: String? = null
-        var questName: String? = null
-        var questColor: String? = null
-        var questLink: String? = null
-        var storyBranch: String? = null
-        var detail: String? = null
-        var detailLink: String? = null
-
-        val quests = mutableMapOf<QuestInfo, List<ExtraDetail>>()
-
-        for (row in sheet) {
-
-            if (row.rowNum >= startRow) { // Check if row is >= 10
-                // Check if the entire row is blank
-                if (isRowBlank(row)) {
-                    consecutiveBlankRows++
-                    if (consecutiveBlankRows == 2) {
-                        anyOrder = false
-                        storyBranch = null
-                    }
-                    continue // Skip processing this blank row
-                } else {
-                    consecutiveBlankRows = 0 // Reset counter if row is not blank
-                }
-
-                for (colIndex in startCol..endCol) {
-                    val cell = row.getCell(colIndex, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK)
-                    val cellValue = getCellValue(cell)
-
-                    // Detect start marker
-                    if (cellValue == anyOrderStartMarker) {
-                        storyBranch = null
-                        anyOrder = true
-                        consecutiveBlankRows = 0
-                        continue
-                    } else if (cellValue?.contains(storyBranchMarker) == true) {
-                        storyBranch = cellValue
-                        continue
-                    } else if (cellValue?.contains(considerIgnoringMarker) == true) {
-                        considerIgnoringCounter = 1
-                        continue
-                    } else if (cellValue?.contains(theOnlyReasonMarker) == true) {
-                        theOnlyReasonCounter = 7
-                        continue
-                    }
-
-                    // Location
-                    if (colIndex == 0) {
-                        // Print marker status
-                        if (anyOrder) {
-                            print("*\t")
-                        } else {
-                            print(" \t")
-                        }
-
-                        if (storyBranch != null) {
-                            val str = storyBranch.removePrefix(storyBranchMarker)
-                            print("$str\t")
-                        } else {
-                            print(" \t")
-                        }
-
-                        if (cellValue != null) {
-                            location = cellValue
-                            print("$cellValue\t")
-                        } else {
-                            print("\t")
-                        }
-                    }
-
-                    // Quest name
-                    if (colIndex == 1) {
-                        val cellColor = getCellColor(cell)
-                        if (cellColor != null) {
-                            print("$cellColor\t")
-                            questColor = cellColor
-                        }
-
-                        val hyperlink = cell.hyperlink
-                        if (hyperlink != null) {
-                            print("${hyperlink.address}\t")
-                            questLink = hyperlink.address
-                        }
-
-                        if (cellValue != null) {
-                            id = row.rowNum
-                            orderIndex++
-                            questName = cellValue
-                            print("$cellValue\t")
-                        } else {
-                            print("\t")
-                        }
-                    }
-
-                    // Details
-                    if (colIndex == 3) {
-                        if (cellValue != null) {
-                            detail = cellValue
-                            print("$cellValue\t")
-                        } else {
-                            print("\t")
-                        }
-
-                        val hyperlink = cell.hyperlink
-                        if (hyperlink != null) {
-                            print("${hyperlink.address}\t")
-                            detailLink = hyperlink.address
-                        }
-                    }
-                }
-
-                println() // Move to the next line after printing all columns in the row
-
-                val details = if (detail != null) {
-                    mutableListOf(ExtraDetail(detail, detailLink, false))
-                } else {
-                    mutableListOf()
-                }
-
-                val msg =
-                    if (theOnlyReasonCounter > 0 && theOnlyReasonCounter < 7) skelligeMessage else null
-
-                val (name, level) = extractLevel(questName!!)
-
-                val quest = QuestInfo(
-                    id!!,
-                    location!!,
-                    name,
-                    questColor!!,
-                    questLink!!,
-                    level,
-                    if (anyOrder) Order.Any else Order.Suggested(orderIndex),
-                    considerIgnoringCounter == 0,
-                    storyBranch,
-                    msg,
-                )
-
-                if (quests.contains(quest)) {
-                    val existing = quests.getValue(quest)
-                    val new = existing.plus(details)
-                    quests[quest] = new
-                } else {
-                    quests[quest] = details
-                }
-
-                if (considerIgnoringCounter > 0) considerIgnoringCounter--
-                else considerIgnoringCounter = -1
-
-                if (theOnlyReasonCounter > 0) {
-                    theOnlyReasonCounter--
-                } else {
-                    theOnlyReasonCounter = -1
-                }
-            }
-        }
-
-        return quests.map {
-            QuestRaw(it.key, it.value)
-        }.map {
-            val info = it.questInfo
-            val details = it.extraDetails
-
-            Quest(
-                id = info.id,
-                location = info.location,
-                quest = info.name,
-                isCompleted = false,
-                suggested = info.level,
-                url = info.link,
-                branch = info.storyBranch,
-                order = info.order,
-                extraDetails = details
-            )
-        }
-    }
+//    override fun extractData(): List<Quest> {
+//        val sheet = workbook.getSheetAt(1)
+//
+//        var anyOrder = false
+//        var consecutiveBlankRows = 0
+//        var considerIgnoringCounter = -1
+//        var theOnlyReasonCounter = -1
+//
+//        var id: Int? = null
+//        var orderIndex = 0
+//
+//        var location: String? = null
+//        var questName: String? = null
+//        var questColor: String? = null
+//        var questLink: String? = null
+//        var storyBranch: String? = null
+//        var detail: String? = null
+//        var detailLink: String? = null
+//
+//        val quests = mutableMapOf<QuestInfo, List<ExtraDetail>>()
+//
+//        for (row in sheet) {
+//
+//            if (row.rowNum >= startRow) { // Check if row is >= 10
+//                // Check if the entire row is blank
+//                if (isRowBlank(row)) {
+//                    consecutiveBlankRows++
+//                    if (consecutiveBlankRows == 2) {
+//                        anyOrder = false
+//                        storyBranch = null
+//                    }
+//                    continue // Skip processing this blank row
+//                } else {
+//                    consecutiveBlankRows = 0 // Reset counter if row is not blank
+//                }
+//
+//                for (colIndex in startCol..endCol) {
+//                    val cell = row.getCell(colIndex, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK)
+//                    val cellValue = getCellValue(cell)
+//
+//                    // Detect start marker
+//                    if (cellValue == anyOrderStartMarker) {
+//                        storyBranch = null
+//                        anyOrder = true
+//                        consecutiveBlankRows = 0
+//                        continue
+//                    } else if (cellValue?.contains(storyBranchMarker) == true) {
+//                        storyBranch = cellValue
+//                        continue
+//                    } else if (cellValue?.contains(considerIgnoringMarker) == true) {
+//                        considerIgnoringCounter = 1
+//                        continue
+//                    } else if (cellValue?.contains(theOnlyReasonMarker) == true) {
+//                        theOnlyReasonCounter = 7
+//                        continue
+//                    }
+//
+//                    // Location
+//                    if (colIndex == 0) {
+//                        // Print marker status
+//                        if (anyOrder) {
+//                            print("*\t")
+//                        } else {
+//                            print(" \t")
+//                        }
+//
+//                        if (storyBranch != null) {
+//                            val str = storyBranch.removePrefix(storyBranchMarker)
+//                            print("$str\t")
+//                        } else {
+//                            print(" \t")
+//                        }
+//
+//                        if (cellValue != null) {
+//                            location = cellValue
+//                            print("$cellValue\t")
+//                        } else {
+//                            print("\t")
+//                        }
+//                    }
+//
+//                    // Quest name
+//                    if (colIndex == 1) {
+//                        val cellColor = getCellColor(cell)
+//                        if (cellColor != null) {
+//                            print("$cellColor\t")
+//                            questColor = cellColor
+//                        }
+//
+//                        val hyperlink = cell.hyperlink
+//                        if (hyperlink != null) {
+//                            print("${hyperlink.address}\t")
+//                            questLink = hyperlink.address
+//                        }
+//
+//                        if (cellValue != null) {
+//                            id = row.rowNum
+//                            orderIndex++
+//                            questName = cellValue
+//                            print("$cellValue\t")
+//                        } else {
+//                            print("\t")
+//                        }
+//                    }
+//
+//                    // Details
+//                    if (colIndex == 3) {
+//                        if (cellValue != null) {
+//                            detail = cellValue
+//                            print("$cellValue\t")
+//                        } else {
+//                            print("\t")
+//                        }
+//
+//                        val hyperlink = cell.hyperlink
+//                        if (hyperlink != null) {
+//                            print("${hyperlink.address}\t")
+//                            detailLink = hyperlink.address
+//                        }
+//                    }
+//                }
+//
+//                println() // Move to the next line after printing all columns in the row
+//
+//                val details = if (detail != null) {
+//                    mutableListOf(ExtraDetail(detail, detailLink, false))
+//                } else {
+//                    mutableListOf()
+//                }
+//
+//                val msg =
+//                    if (theOnlyReasonCounter > 0 && theOnlyReasonCounter < 7) skelligeMessage else null
+//
+//                val (name, level) = extractLevel(questName!!)
+//
+//                val quest = QuestInfo(
+//                    id!!,
+//                    location!!,
+//                    name,
+//                    questColor!!,
+//                    questLink!!,
+//                    level,
+//                    if (anyOrder) Order.Any else Order.Suggested(orderIndex),
+//                    considerIgnoringCounter == 0,
+//                    storyBranch,
+//                    msg,
+//                )
+//
+//                if (quests.contains(quest)) {
+//                    val existing = quests.getValue(quest)
+//                    val new = existing.plus(details)
+//                    quests[quest] = new
+//                } else {
+//                    quests[quest] = details
+//                }
+//
+//                if (considerIgnoringCounter > 0) considerIgnoringCounter--
+//                else considerIgnoringCounter = -1
+//
+//                if (theOnlyReasonCounter > 0) {
+//                    theOnlyReasonCounter--
+//                } else {
+//                    theOnlyReasonCounter = -1
+//                }
+//            }
+//        }
+//
+//        return quests.map {
+//            QuestRaw(it.key, it.value)
+//        }.map {
+//            val info = it.questInfo
+//            val details = it.extraDetails
+//
+//            Quest(
+//                id = info.id,
+//                location = info.location,
+//                quest = info.name,
+//                isCompleted = false,
+//                suggested = info.level,
+//                url = info.link,
+//                branch = info.storyBranch,
+//                order = info.order,
+//                extraDetails = details
+//            )
+//        }
+//    }
 
     override fun write(data: List<Quest>, destination: String) {
         val json = Json.encodeToString(data)
@@ -427,7 +434,7 @@ data class QuestKey(
     val color: String,
     val link: String,
     val considerIgnoring: Boolean,
-//    val storyBranch: String?,
+    val storyBranch: String?,
     val message: String?,
 )
 
@@ -442,7 +449,7 @@ data class QuestComplete(
     val color: String,
 //    val order: Order,
     val considerIgnoring: Boolean,
-//    val storyBranch: String?,
+    val storyBranch: String?,
     val message: String?,
 )
 
