@@ -4,16 +4,14 @@ import com.jfranco.w3.quests.shared.ExtraDetail
 import com.jfranco.w3.quests.shared.Level
 import com.jfranco.w3.quests.shared.Order
 import com.jfranco.w3.quests.shared.Quest
+import com.jfranco.w3.quests.shared.QuestType
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import org.apache.poi.hssf.usermodel.HSSFCellStyle
-import org.apache.poi.hssf.util.HSSFColor
 import org.apache.poi.ss.usermodel.Cell
 import org.apache.poi.ss.usermodel.CellStyle
 import org.apache.poi.ss.usermodel.CellType
 import org.apache.poi.ss.usermodel.DateUtil
 import org.apache.poi.ss.usermodel.Row
-import org.apache.poi.ss.usermodel.Sheet
 import org.apache.poi.ss.usermodel.Workbook
 import org.apache.poi.ss.usermodel.WorkbookFactory
 import org.apache.poi.xssf.usermodel.XSSFCellStyle
@@ -23,8 +21,6 @@ import java.io.InputStream
 
 // Define the starting row and column range (A to G corresponds to 0 to 6 in zero-based indexing)
 const val startRow = 9 // Row 10 (index 9)
-const val startCol = 0 // Column A (index 0)
-const val endCol = 6   // Column G (index 6)
 
 const val skelligeMessage =
     "THE ONLY REASON THAT 'DESTINATION: SKELLIGE' IS PLACED HERE IS BECAUSE 'FLESH FOR SALE' IS EASILY MISSABLE AND THE ONLY WAY TO DO IT IS IN SKELLIGE. AS LONG AS YOU COMPLETE 'FLESH FOR SALE' BEFORE STARTING 'FOLLOWING THE THREAD', THEN YOU CAN TRAVEL TO SKELLIGE WHEN YOU ARE READY."
@@ -37,6 +33,16 @@ const val anyOrderStartMarker = "THE FOLLOWING QUESTS CAN BE DONE AT ANY TIME IN
 const val considerIgnoringMarker =
     "THE FOLLOWING QUEST IS NOT WORTH DOING CONSIDERING HOW OUT OF ORDER YOU WILL HAVE TO DO CERTAIN QUESTS."
 const val theOnlyReasonMarker = "THE ONLY REASON THAT 'DESTINATION: SKELLIGE'"
+
+val missionTypeByColor = mapOf(
+    "e06666" to QuestType.Main,
+    "f6b26b" to QuestType.Secondary,
+    "ffd966" to QuestType.Contract,
+    "93c47d" to QuestType.TreasureHunt,
+    "3d85c6" to QuestType.ScavengerHunt,
+    "a4c2f4" to QuestType.GwentAndTheHeroesPursuits,
+    "8e7cc3" to QuestType.ChanceEncounters,
+)
 
 interface DataExtractor {
     fun extractData(): List<Quest>
@@ -113,6 +119,7 @@ class ExcelExtractor(
                     level = level,
                     order = if (anyOrder) Order.Any else Order.Suggested(0),
                     color = color!!,
+                    type = missionTypeByColor[color]!!,
                     message = message,
                     storyBranch = storyBranch,
                     considerIgnoring = considerIgnoring
@@ -139,6 +146,7 @@ class ExcelExtractor(
         return quests.map { (key, value) ->
             Quest(
                 id = value.id,
+                type = key.type,
                 location = key.location,
                 quest = key.name,
                 color = key.color,
@@ -238,27 +246,13 @@ private fun extractLevel(input: String): Pair<String, Level> {
 }
 
 data class QuestKey(
+    val type: QuestType,
     val location: String,
     val name: String,
     val level: Level,
     val order: Order,
     val color: String,
     val link: String,
-    val considerIgnoring: Boolean,
-    val storyBranch: String?,
-    val message: String?,
-)
-
-data class QuestComplete(
-    val id: Int,
-    val location: String,
-    val name: String,
-    val level: Level,
-    val link: String,
-    val order: Order,
-    val extraDetails: List<ExtraDetail>,
-    val color: String,
-//    val order: Order,
     val considerIgnoring: Boolean,
     val storyBranch: String?,
     val message: String?,
@@ -267,22 +261,4 @@ data class QuestComplete(
 private data class QuestValue(
     val id: Int,
     val extras: List<ExtraDetail>,
-)
-
-private data class QuestRaw(
-    val questInfo: QuestInfo,
-    val extraDetails: List<ExtraDetail>,
-)
-
-private data class QuestInfo(
-    val id: Int,
-    val location: String,
-    val name: String,
-    val color: String,
-    val link: String,
-    val level: Level,
-    val order: Order,
-    val considerIgnoring: Boolean,
-    val storyBranch: String?,
-    val theOnlyReasonMessage: String?,
 )

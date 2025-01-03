@@ -36,7 +36,7 @@ import com.jfranco.w3.quests.shared.ExtraDetail
 import com.jfranco.w3.quests.shared.Level
 import com.jfranco.w3.quests.shared.Order
 import com.jfranco.w3.quests.shared.Quest
-import com.jfranco.w3.quests.shared.Type
+import com.jfranco.w3.quests.shared.QuestType
 import com.jfranco.witcher3.quests.android.ui.theme.AppTheme
 
 @Composable
@@ -104,7 +104,7 @@ fun QuestCard(
                         Modifier.padding(start = contentPadding / 2)
                     ) {
                         Text(
-                            text = quest.color,
+                            text = quest.type.show,
                             style = MaterialTheme.typography.bodySmall,
                         )
                         Text(
@@ -217,7 +217,8 @@ fun QuestsCompletedPreview() {
         order = Order.Suggested(1),
         color = "",
         considerIgnoring = false,
-        message = null
+        message = null,
+        type = QuestType.Main
     )
     AppTheme(
         useDarkTheme = false
@@ -259,7 +260,8 @@ fun QuestsOpenPreview() {
         order = Order.Suggested(1),
         color = "",
         considerIgnoring = false,
-        message = null
+        message = null,
+        type = QuestType.Main
     )
 
     AppTheme(

@@ -9,27 +9,6 @@ interface QuestsRepository {
     val quests: List<Quest>
 }
 
-data class QuestGroup(
-    val name: String,
-    val quests: List<Quest>
-)
-
-@Serializable
-sealed class Level {
-    @Serializable
-    data object Any : Level()
-
-    @Serializable
-    data class Suggested(val level: Int) : Level()
-
-    fun show(): String {
-        return when (this) {
-            is Any -> "Any"
-            is Suggested -> level.toString()
-        }
-    }
-}
-
 sealed class QuestsCollection {
 
     data class QuestsByLocation(val location: String, val quests: List<Quest>) :
@@ -46,36 +25,51 @@ sealed class QuestsCollection {
     }
 }
 
-fun List<QuestsCollection>.filter(predicate: (Quest) -> Boolean): List<QuestsCollection> {
-    return mapNotNull { collection ->
-        when (collection) {
-            is QuestsCollection.QuestsByLocation -> {
-                collection.copy(
-                    quests = collection.quests.filter(predicate)
-                )
-            }
+data class QuestGroup(
+    val name: String,
+    val quests: List<Quest>
+)
 
-            is QuestsCollection.QuestsGrouped -> {
+@Serializable
+sealed class QuestType(val show: String) {
 
-                val groups = collection.questsGroups.mapNotNull {
-                    val updatedQuests = it.quests.filter(predicate)
+    @Serializable
+    data object Main : QuestType("Main")
 
-                    if (updatedQuests.isNotEmpty()) {
-                        it.copy(quests = updatedQuests)
-                    } else {
-                        null
-                    }
-                }
+    @Serializable
+    data object Secondary : QuestType("Secondary")
 
-                if (groups.isNotEmpty()) {
-                    collection.copy(questsGroups = groups)
-                } else {
-                    null
-                }
-            }
+    @Serializable
+    data object Contract : QuestType("Contract")
+
+    @Serializable
+    data object TreasureHunt : QuestType("Treasure Hunt")
+
+    @Serializable
+    data object ScavengerHunt : QuestType("Scavenger Hunt")
+
+    @Serializable
+    data object GwentAndTheHeroesPursuits : QuestType("Gwent & The Heroes' Pursuits")
+
+    @Serializable
+    data object ChanceEncounters : QuestType("Chance Encounters")
+
+}
+
+@Serializable
+sealed class Level {
+    @Serializable
+    data object Any : Level()
+
+    @Serializable
+    data class Suggested(val level: Int) : Level()
+
+    fun show(): String {
+        return when (this) {
+            is Any -> "Any"
+            is Suggested -> level.toString()
         }
     }
-
 }
 
 @Serializable
@@ -106,6 +100,7 @@ sealed class Type(val type: String) {
 @Serializable
 data class Quest(
     val id: Int,
+    val type: QuestType,
     val location: String,
     val quest: String,
     val isCompleted: Boolean,
@@ -132,3 +127,57 @@ data class QuestStatus(
     val isCompleted: Boolean,
     val isHidden: Boolean,
 )
+
+
+fun List<QuestsCollection>.filter(predicate: (Quest) -> Boolean): List<QuestsCollection> {
+    return mapNotNull { collection ->
+        when (collection) {
+            is QuestsCollection.QuestsByLocation -> {
+                collection.copy(
+                    quests = collection.quests.filter(predicate)
+                )
+            }
+
+            is QuestsCollection.QuestsGrouped -> {
+
+                val groups = collection.questsGroups.mapNotNull {
+                    val updatedQuests = it.quests.filter(predicate)
+
+                    if (updatedQuests.isNotEmpty()) {
+                        it.copy(quests = updatedQuests)
+                    } else {
+                        null
+                    }
+                }
+
+                if (groups.isNotEmpty()) {
+                    collection.copy(questsGroups = groups)
+                } else {
+                    null
+                }
+            }
+        }
+    }
+}
+
+
+fun List<Quest>.groupContiguousItemsByLocation(): List<Pair<String, List<Quest>>> =
+    buildList {
+        var previousLocation: String? = null
+        var currentGroup = mutableListOf<Quest>()
+
+        // iterate over each incoming value
+        for (currentElement: Quest in this@groupContiguousItemsByLocation) {
+            if (previousLocation == null) {
+                previousLocation = currentElement.location
+            } else if (previousLocation != currentElement.location) {
+                add(previousLocation to currentGroup.toList())
+                previousLocation = currentElement.location
+                currentGroup = mutableListOf()
+            }
+
+            currentGroup.add(currentElement)
+        }
+
+        add(previousLocation!! to currentGroup.toList())
+    }

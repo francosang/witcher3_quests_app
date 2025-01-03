@@ -7,6 +7,7 @@ import com.jfranco.w3.quests.shared.QuestGroup
 import com.jfranco.w3.quests.shared.QuestStatus
 import com.jfranco.w3.quests.shared.QuestsCollection
 import com.jfranco.w3.quests.shared.QuestsRepository
+import com.jfranco.w3.quests.shared.groupContiguousItemsByLocation
 import com.jfranco.witcher3.quests.android.R
 import com.jfranco.witcher3.quests.android.persistence.dao.QuestStatusDao
 import com.jfranco.witcher3.quests.android.persistence.entity.QuestStatusEntity
@@ -84,24 +85,3 @@ class JsonQuestsRepositoryImpl(
         return questStatusDao.insertAll(entity)
     }
 }
-
-private fun List<Quest>.groupContiguousItemsByLocation(): List<Pair<String, List<Quest>>> =
-    buildList {
-        var previousLocation: String? = null
-        var currentGroup = mutableListOf<Quest>()
-
-        // iterate over each incoming value
-        for (currentElement: Quest in this@groupContiguousItemsByLocation) {
-            if (previousLocation == null) {
-                previousLocation = currentElement.location
-            } else if (previousLocation != currentElement.location) {
-                add(previousLocation to currentGroup.toList())
-                previousLocation = currentElement.location
-                currentGroup = mutableListOf()
-            }
-
-            currentGroup.add(currentElement)
-        }
-
-        add(previousLocation!! to currentGroup.toList())
-    }
