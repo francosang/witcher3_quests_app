@@ -2,7 +2,6 @@ package com.jfranco.w3.quests.shared
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.Serializable
-import java.util.function.Predicate
 
 interface QuestsRepository {
     fun updates(): Flow<List<QuestsCollection>>

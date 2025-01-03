@@ -1,6 +1,7 @@
 package com.jfranco.witcher3.quests.cli
 
 import com.jfranco.w3.quests.shared.Level
+import com.jfranco.w3.quests.shared.Quest
 import java.io.FileInputStream
 
 fun main() = xlsx()

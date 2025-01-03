@@ -102,4 +102,6 @@ private fun List<Quest>.groupContiguousItemsByLocation(): List<Pair<String, List
 
             currentGroup.add(currentElement)
         }
+
+        add(previousLocation!! to currentGroup.toList())
     }
