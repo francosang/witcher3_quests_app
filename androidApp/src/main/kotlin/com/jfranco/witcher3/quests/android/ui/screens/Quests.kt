@@ -1,14 +1,13 @@
 package com.jfranco.witcher3.quests.android.ui.screens
 
-import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -37,6 +36,7 @@ import com.jfranco.w3.quests.shared.QuestsRepository
 import com.jfranco.w3.quests.shared.filter
 import com.jfranco.witcher3.quests.android.MainApp
 import com.jfranco.witcher3.quests.android.ui.components.IndexedLazyColumn
+import com.jfranco.witcher3.quests.android.ui.components.IndexedLazyListState
 import com.jfranco.witcher3.quests.android.ui.components.QuestCard
 import com.jfranco.witcher3.quests.android.ui.components.rememberIndexedLazyListState
 import kotlinx.coroutines.flow.Flow
@@ -49,7 +49,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun QuestsScreen() {
     val viewModel = questsViewModel()
@@ -66,7 +65,6 @@ fun QuestsScreen() {
         }
     } else {
         val indexedListState = rememberIndexedLazyListState()
-        val expandedItems = remember { mutableStateListOf<Quest>() }
 
         LaunchedEffect(Unit) {
             viewModel.searchSelectedQuest.collect {
@@ -74,129 +72,120 @@ fun QuestsScreen() {
             }
         }
 
-        fun onClick(quest: Quest) {
-            if (expandedItems.contains(quest)) {
-                expandedItems.remove(quest)
-            } else {
-                expandedItems.add(quest)
-            }
-        }
+        QuestsList(
+            questsByLocation,
+            indexedListState,
+            viewModel
+        )
+    }
+}
 
-        IndexedLazyColumn(
-            modifier = Modifier
-                .fillMaxSize(),
-            state = indexedListState,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            questsByLocation
-                .forEach { collection ->
-                    when (collection) {
-                        is QuestsCollection.QuestsByLocation -> {
-                            stickyHeader {
-                                Surface(Modifier.fillParentMaxWidth()) {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .background(MaterialTheme.colorScheme.background)
-                                            .wrapContentHeight()
-                                    ) {
-                                        Text(
-                                            text = collection.location(),
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(6.dp)
-                                                .padding(top = 8.dp),
-                                            style = MaterialTheme.typography.headlineSmall,
-                                            textAlign = TextAlign.Center
-                                        )
-                                    }
-                                }
-                            }
+@Composable
+fun QuestsList(
+    collection: List<QuestsCollection>,
+    lazyListState: IndexedLazyListState,
+    viewModel: QuestsViewModel
+) {
+    val expandedItems = remember { mutableStateListOf<Quest>() }
 
-                            items(collection.quests, key = { it.id }) {
-                                QuestCard(
-                                    modifier = Modifier.padding(horizontal = 12.dp),
-                                    quest = it,
-                                    isSelected = expandedItems.contains(it),
-                                    onClick = ::onClick,
-                                    onCompletedChanged = { isChecked ->
-                                        Log.i(
-                                            "MainActivity",
-                                            "Checked: $isChecked"
-                                        )
-
-                                        viewModel.save(
-                                            QuestStatus(
-                                                id = it.id,
-                                                isCompleted = isChecked,
-                                                isHidden = false
-                                            )
-                                        )
-                                    }
-                                )
-                            }
-                        }
-
-                        is QuestsCollection.QuestsGrouped -> {
-
-                            collection.questsGroups.forEach { (groupName, quests) ->
-                                stickyHeader {
-                                    Surface(Modifier.fillParentMaxWidth()) {
-                                        Column(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .wrapContentHeight()
-                                        ) {
-                                            Text(
-                                                text = collection.location(),
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(6.dp)
-                                                    .padding(top = 8.dp),
-                                                style = MaterialTheme.typography.headlineSmall,
-                                                textAlign = TextAlign.Center
-                                            )
-
-                                            Text(
-                                                text = groupName,
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(bottom = 8.dp),
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                textAlign = TextAlign.Center
-                                            )
-                                        }
-                                    }
-                                }
-
-                                items(quests, key = { it.id }) {
-                                    QuestCard(
-                                        modifier = Modifier.padding(horizontal = 12.dp),
-                                        quest = it,
-                                        isSelected = expandedItems.contains(it),
-                                        onClick = ::onClick,
-                                        onCompletedChanged = { isChecked ->
-                                            Log.i(
-                                                "MainActivity",
-                                                "Checked: $isChecked"
-                                            )
-
-                                            viewModel.save(
-                                                QuestStatus(
-                                                    id = it.id,
-                                                    isCompleted = isChecked,
-                                                    isHidden = false
-                                                )
-                                            )
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
+    fun onClick(quest: Quest) {
+        if (expandedItems.contains(quest)) {
+            expandedItems.remove(quest)
+        } else {
+            expandedItems.add(quest)
         }
     }
+
+    IndexedLazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        state = lazyListState,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        collection.forEach { collection ->
+            when (collection) {
+                is QuestsCollection.QuestsByLocation -> {
+                    questGroupHeader(collection.location)
+                    quests(
+                        collection.quests,
+                        viewModel,
+                        expandedItems::contains,
+                        ::onClick
+                    )
+                }
+
+                is QuestsCollection.QuestsGrouped -> {
+                    collection.questsGroups.forEach { (groupName, quests) ->
+                        questGroupHeader(collection.location, groupName)
+                        quests(
+                            quests,
+                            viewModel,
+                            expandedItems::contains,
+                            ::onClick
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+fun LazyListScope.questGroupHeader(
+    location: String,
+    group: String? = null
+) = stickyHeader {
+    Surface(Modifier.fillParentMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .wrapContentHeight()
+        ) {
+            Text(
+                text = location,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(6.dp)
+                    .padding(top = 8.dp),
+                style = MaterialTheme.typography.headlineSmall,
+                textAlign = TextAlign.Center
+            )
+
+            if (group != null) {
+                Text(
+                    text = group,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+    }
+}
+
+
+fun LazyListScope.quests(
+    quests: List<Quest>,
+    viewModel: QuestsViewModel,
+    isSelected: (Quest) -> Boolean,
+    onClick: (Quest) -> Unit,
+) = items(quests, key = { it.id }) {
+    QuestCard(
+        modifier = Modifier.padding(horizontal = 12.dp),
+        quest = it,
+        isSelected = isSelected(it),
+        onClick = onClick,
+        onCompletedChanged = { isChecked ->
+            viewModel.save(
+                QuestStatus(
+                    id = it.id,
+                    isCompleted = isChecked,
+                    isHidden = false
+                )
+            )
+        }
+    )
 }
 
 
