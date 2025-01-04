@@ -30,7 +30,7 @@ fun QuestsScreen() {
                 .padding(paddingValues)
                 .fillMaxSize()
         ) {
-            QuestList(state) { quest, isChecked ->
+            QuestList(state, onScrollEnd = viewModel::onScrollEnd) { quest, isChecked ->
                 viewModel.save(
                     QuestStatus(
                         id = quest.id,

@@ -12,6 +12,9 @@ interface QuestStatusDao {
     @Query("SELECT * FROM quest_status")
     fun changes(): Flow<List<QuestStatusEntity>>
 
+    @Query("SELECT * FROM quest_status WHERE is_completed = 1 ORDER BY uid DESC LIMIT 1")
+    suspend fun lastCompleted(): QuestStatusEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(vararg questStatus: QuestStatusEntity)
 }

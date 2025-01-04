@@ -7,6 +7,7 @@ interface QuestsRepository {
     fun questsStatusUpdates(): Flow<List<QuestStatus>>
     suspend fun save(questStatus: QuestStatus)
     suspend fun getQuests(): List<Quest>
+    suspend fun getLastCompletedQuest(): QuestStatus?
 }
 
 sealed class QuestsCollection {
@@ -16,13 +17,6 @@ sealed class QuestsCollection {
 
     data class QuestsGrouped(val location: String, val questsGroups: List<QuestGroup>) :
         QuestsCollection()
-
-    fun location(): String {
-        return when (this) {
-            is QuestsByLocation -> location
-            is QuestsGrouped -> location
-        }
-    }
 }
 
 data class QuestGroup(

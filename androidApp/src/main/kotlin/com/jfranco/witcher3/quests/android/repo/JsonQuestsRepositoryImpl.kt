@@ -39,4 +39,10 @@ class JsonQuestsRepositoryImpl(
 
         return questStatusDao.insertAll(entity)
     }
+
+    override suspend fun getLastCompletedQuest(): QuestStatus? {
+        return questStatusDao.lastCompleted()?.let {
+            QuestStatus(it.uid, it.isCompleted, it.isHidden)
+        }
+    }
 }

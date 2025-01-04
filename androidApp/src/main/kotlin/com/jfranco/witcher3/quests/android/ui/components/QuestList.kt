@@ -28,6 +28,7 @@ import com.jfranco.witcher3.quests.android.ui.screens.QuestsUiState
 @Composable
 fun QuestList(
     state: QuestsUiState,
+    onScrollEnd: () -> Unit,
     onCompletedChanged: (Quest, Boolean) -> Unit
 ) {
     val questsByLocation = state.questsCollection
@@ -44,11 +45,14 @@ fun QuestList(
     } else {
         val indexedListState = rememberIndexedLazyListState()
 
-        if (state.searchResultSelected != null) {
-            LaunchedEffect(state.searchResultSelected) {
-                indexedListState.animateScrollToItem(state.searchResultSelected.id)
+        if (state.scrollTo != null) {
+            LaunchedEffect(state.scrollTo) {
+                indexedListState.animateScrollToItem(state.scrollTo.id)
+                onScrollEnd()
             }
         }
+
+        val questsByLocation = state.questsCollection
 
         QuestsList(
             questsByLocation,
@@ -141,7 +145,6 @@ fun LazyListScope.questGroupHeader(
         }
     }
 }
-
 
 fun LazyListScope.quests(
     quests: List<Quest>,
