@@ -4,9 +4,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.Serializable
 
 interface QuestsRepository {
-    fun updates(): Flow<List<QuestsCollection>>
+    fun questsStatusUpdates(): Flow<List<QuestStatus>>
     suspend fun save(questStatus: QuestStatus)
-    val quests: List<Quest>
+    suspend fun getQuests(): List<Quest>
 }
 
 sealed class QuestsCollection {

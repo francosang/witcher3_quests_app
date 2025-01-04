@@ -26,17 +26,18 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.jfranco.witcher3.quests.android.R
+import com.jfranco.witcher3.quests.android.ui.screens.QuestsUiState
 import com.jfranco.witcher3.quests.android.ui.screens.questsViewModel
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun QuestsTopBar() {
+fun QuestsTopBar(state: QuestsUiState) {
     val viewModel = questsViewModel()
-    val hiding by viewModel.hidingCompletedQuests.collectAsState()
-    val quests by viewModel.filteredQuests.collectAsState(viewModel.quests)
-    val searchText by viewModel.searchQuery.collectAsState()
-    val isSearching by viewModel.isSearching.collectAsState()
+    val hidingCompletedQuests = state.hidingCompletedQuests
+    val searchResults = state.searchResults
+    val searchQuery = state.searchQuery
+    val isSearching = state.isSearching
 
     val focusRequester = remember { FocusRequester() }
 
@@ -79,14 +80,14 @@ fun QuestsTopBar() {
                             }
 
                             IconButton(onClick = {
-                                when (hiding) {
+                                when (hidingCompletedQuests) {
                                     true -> viewModel.showCompletedQuests()
                                     false -> viewModel.hideCompletedQuests()
                                     null -> {}
                                 }
                             }) {
 
-                                when (hiding) {
+                                when (hidingCompletedQuests) {
                                     true -> Icon(
                                         painterResource(R.drawable.ic_shown),
                                         contentDescription = "Show completed quests"
@@ -102,7 +103,7 @@ fun QuestsTopBar() {
                             }
                         }
                     },
-                    query = searchText,
+                    query = searchQuery,
                     onQueryChange = viewModel::updateSearchQuery,
                     onSearch = viewModel::updateSearchQuery,
                     expanded = isSearching,
@@ -113,7 +114,7 @@ fun QuestsTopBar() {
             onExpandedChange = viewModel::toggleSearch,
         ) {
             LazyColumn {
-                items(quests) { quest ->
+                items(searchResults) { quest ->
                     Text(
                         text = quest.quest,
                         modifier = Modifier
@@ -126,93 +127,4 @@ fun QuestsTopBar() {
             }
         }
     }
-
-//    TopAppBar(
-//        title = {
-
-//            if (searching) {
-//                val searchQuery by viewModel.querySearchQuery.collectAsState()
-//                var active by remember { mutableStateOf(false) }
-//
-//                LaunchedEffect(Unit) {
-//                    focusRequester.requestFocus()
-//                }
-//
-//                fun onClose() {
-//                    searching = false
-//                    active = false
-//                    viewModel.updateSearchQuery("")
-//                }
-//
-//                PredictiveBackHandler(enabled = true) { progress: Flow<BackEventCompat> ->
-//                    try {
-//                        progress.collect {}
-//                        onClose()
-//                    } catch (_: CancellationException) {
-//                    }
-//                }
-//
-//                SearchBarDefaults.InputField(
-//                    modifier = Modifier.focusRequester(focusRequester),
-//                    query = searchQuery,
-//                    onQueryChange = {
-//                        viewModel.updateSearchQuery(it)
-//                    },
-//                    onSearch = {
-//                        onClose()
-//                    },
-//                    expanded = active,
-//                    onExpandedChange = { active = it },
-//                    placeholder = { Text("Search") },
-//                    leadingIcon = {
-//                        Icon(
-//                            imageVector = Icons.Rounded.Search,
-//                            contentDescription = null,
-//                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-//                        )
-//                    },
-//                    trailingIcon = {
-//                        if (active)
-//                            Icon(
-//                                modifier = Modifier.clickable {
-//                                    onClose()
-//                                },
-//                                imageVector = Icons.Rounded.Close,
-//                                contentDescription = null
-//                            )
-//                    },
-//                )
-//            } else {
-//                Text("The Witcher 3 Quests")
-//            }
-//        },
-//        actions = {
-////            if (searching.not()) {
-////                IconButton(onClick = {
-////                    searching = true
-////                }) {
-////                    Icon(Icons.Default.Search, contentDescription = "Search")
-////                }
-////            }
-//
-//            IconButton(onClick = {
-//                if (showing == QuestsCompleted.SHOWING) {
-//                    viewModel.hideCompletedQuests()
-//                } else {
-//                    viewModel.showCompletedQuests()
-//                }
-//            }) {
-//                when (showing) {
-//                    QuestsCompleted.LOADING -> {}
-//                    QuestsCompleted.HIDDEN ->
-//                        Icon(painterResource(R.drawable.ic_shown), contentDescription = "Show")
-//
-//                    QuestsCompleted.SHOWING ->
-//                        Icon(painterResource(R.drawable.ic_hidden), contentDescription = "Hide")
-//
-//                }
-//            }
-//        }
-//    )
-
 }
