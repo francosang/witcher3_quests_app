@@ -9,20 +9,26 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.jfranco.w3.quests.shared.QuestStatus
 import com.jfranco.witcher3.quests.android.ui.components.QuestList
 import com.jfranco.witcher3.quests.android.ui.components.QuestsTopBar
 
 @Composable
 fun QuestsScreen() {
-    val viewModel = questsViewModel()
-    val state by questsViewModel().state.collectAsStateWithLifecycle()
+    val viewModel: QuestsViewModel = questsViewModel()
+    val state by viewModel.state.collectAsStateWithLifecycle()
 
-    Log.i("APP", "Updating ui ${state.hashCode()}")
+    Log.e("APP", "----> Updating ui - searchQuery=${state.searchQuery}")
 
     Scaffold(
         topBar = {
-            QuestsTopBar(state)
+            QuestsTopBar(
+                state,
+//                viewModel::toggleSearch,
+//                viewModel::updateSearchQuery,
+//                viewModel::searchSelected,
+//                viewModel::showCompletedQuests,
+//                viewModel::hideCompletedQuests
+            )
         }
     ) { paddingValues ->
         Box(
@@ -30,15 +36,12 @@ fun QuestsScreen() {
                 .padding(paddingValues)
                 .fillMaxSize()
         ) {
-            QuestList(state, onScrollEnd = viewModel::onScrollEnd) { quest, isChecked ->
-                viewModel.save(
-                    QuestStatus(
-                        id = quest.id,
-                        isCompleted = isChecked,
-                        isHidden = false
-                    )
-                )
-            }
+            QuestList(
+                state,
+                onCompletedChanged = { quest, isChecked ->
+                    viewModel.save(quest, isChecked)
+                }
+            )
         }
     }
 }

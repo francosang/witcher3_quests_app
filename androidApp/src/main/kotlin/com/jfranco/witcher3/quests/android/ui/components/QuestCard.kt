@@ -1,6 +1,8 @@
 package com.jfranco.witcher3.quests.android.ui.components
 
-import android.util.Log
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -15,6 +17,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
@@ -24,9 +28,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
@@ -38,6 +46,7 @@ import com.jfranco.w3.quests.shared.Order
 import com.jfranco.w3.quests.shared.Quest
 import com.jfranco.w3.quests.shared.QuestType
 import com.jfranco.witcher3.quests.android.ui.theme.AppTheme
+import kotlinx.coroutines.delay
 
 @Composable
 fun QuestImage(
@@ -64,13 +73,71 @@ fun QuestImage(
 fun QuestCard(
     modifier: Modifier = Modifier,
     quest: Quest,
+    isHighlighted: Boolean = false,
     isSelected: Boolean = false,
     onClick: (Quest) -> Unit,
     onCompletedChanged: (Boolean) -> Unit
 ) {
+
+    val scaleA = remember { Animatable(initialValue = 1f) }
+
+    if (isHighlighted) {
+        LaunchedEffect(Unit) {
+            delay(50)
+            scaleA.animateTo(
+                targetValue = 1.1f,
+                animationSpec = tween(
+                    durationMillis = 100,
+                    easing = FastOutLinearInEasing
+                )
+            )
+            scaleA.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(
+                    durationMillis = 100,
+                    easing = FastOutLinearInEasing
+
+                )
+            )
+            scaleA.animateTo(
+                targetValue = 1.1f,
+                animationSpec = tween(
+                    durationMillis = 100,
+                    easing = FastOutLinearInEasing
+
+                )
+            )
+            scaleA.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(
+                    durationMillis = 100,
+                    easing = FastOutLinearInEasing
+
+                )
+            )
+            scaleA.animateTo(
+                targetValue = 1.1f,
+                animationSpec = tween(
+                    durationMillis = 100,
+                    easing = FastOutLinearInEasing
+
+                )
+            )
+            scaleA.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(
+                    durationMillis = 100,
+                    easing = FastOutLinearInEasing
+
+                )
+            )
+        }
+    }
+
     Card(
         modifier = modifier
             .semantics { selected = isSelected }
+            .scale(scale = scaleA.value)
             .clickable { onClick(quest) }
             .fillMaxWidth(),
     ) {
@@ -82,6 +149,8 @@ fun QuestCard(
 
         val contentPadding = 16.dp
         val contentVerticalPadding = if (isBigCard) 16.dp else 8.dp
+
+        val current = LocalUriHandler.current
 
         Row(
             modifier = Modifier
@@ -143,6 +212,20 @@ fun QuestCard(
                 Column(
                     Modifier.padding(top = contentPadding)
                 ) {
+                    Button(
+                        modifier = Modifier
+                            .padding(bottom = contentPadding)
+                            .align(Alignment.CenterHorizontally),
+                        elevation = ButtonDefaults.buttonElevation(
+                            defaultElevation = 4.dp,
+                        ),
+                        onClick = {
+                            current.openUri(quest.url)
+                        }
+                    ) {
+                        Text("Open external link")
+                    }
+
                     details.forEach { detail ->
                         HorizontalDivider(
                             color = MaterialTheme.colorScheme.tertiaryContainer.copy(
@@ -164,17 +247,17 @@ fun QuestCard(
                                     .padding(vertical = contentPadding / 2),
                                 style = MaterialTheme.typography.bodySmall,
                             )
-                            CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
-                                Checkbox(
-                                    checked = detail.isCompleted,
-                                    onCheckedChange = { isChecked ->
-                                        Log.i(
-                                            "MainActivity",
-                                            "Checked: $isChecked"
-                                        )
-                                    }
-                                )
-                            }
+//                            CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
+//                                Checkbox(
+//                                    checked = detail.isCompleted,
+//                                    onCheckedChange = { isChecked ->
+//                                        Log.i(
+//                                            "MainActivity",
+//                                            "Checked: $isChecked"
+//                                        )
+//                                    }
+//                                )
+//                            }
                         }
                     }
                     HorizontalDivider(

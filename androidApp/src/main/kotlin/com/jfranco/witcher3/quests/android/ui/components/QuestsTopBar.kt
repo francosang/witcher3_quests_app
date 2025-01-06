@@ -16,8 +16,6 @@ import androidx.compose.material3.SearchBar
 import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -29,7 +27,16 @@ import com.jfranco.witcher3.quests.android.R
 import com.jfranco.witcher3.quests.android.ui.screens.QuestsUiState
 import com.jfranco.witcher3.quests.android.ui.screens.questsViewModel
 
-
+/*
+fun QuestsTopBar(
+    state: QuestsUiState,
+    onToggleSearch: (Boolean) -> Unit,
+    onUpdateSearchQuery: (String) -> Unit,
+    onSearchSelected: (Quest) -> Unit,
+    onShowCompletedQuests: () -> Unit,
+    onHideCompletedQuests: () -> Unit,
+) {
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun QuestsTopBar(state: QuestsUiState) {
@@ -83,7 +90,6 @@ fun QuestsTopBar(state: QuestsUiState) {
                                 when (hidingCompletedQuests) {
                                     true -> viewModel.showCompletedQuests()
                                     false -> viewModel.hideCompletedQuests()
-                                    null -> {}
                                 }
                             }) {
 
@@ -97,8 +103,6 @@ fun QuestsTopBar(state: QuestsUiState) {
                                         painterResource(R.drawable.ic_hidden),
                                         contentDescription = "Hide"
                                     )
-
-                                    null -> {}
                                 }
                             }
                         }

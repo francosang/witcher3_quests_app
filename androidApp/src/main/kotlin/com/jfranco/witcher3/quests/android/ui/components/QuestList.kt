@@ -15,8 +15,12 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -28,10 +32,9 @@ import com.jfranco.witcher3.quests.android.ui.screens.QuestsUiState
 @Composable
 fun QuestList(
     state: QuestsUiState,
-    onScrollEnd: () -> Unit,
     onCompletedChanged: (Quest, Boolean) -> Unit
 ) {
-    val questsByLocation = state.questsCollection
+    val questsByLocation = state.questsCollections
 
     if (questsByLocation.isEmpty()) {
         Column(
@@ -45,17 +48,19 @@ fun QuestList(
     } else {
         val indexedListState = rememberIndexedLazyListState()
 
-        if (state.scrollTo != null) {
+        // to avoid repeating the animation on config changes, etc
+        var playedAnimation by rememberSaveable { mutableStateOf<Int?>(null) }
+
+        if (state.scrollTo != null && playedAnimation != state.scrollTo.id) {
             LaunchedEffect(state.scrollTo) {
                 indexedListState.animateScrollToItem(state.scrollTo.id)
-                onScrollEnd()
+                playedAnimation = state.scrollTo.id
             }
         }
 
-        val questsByLocation = state.questsCollection
-
         QuestsList(
             questsByLocation,
+            if (playedAnimation != state.scrollTo?.id) state.scrollTo else null,
             indexedListState,
             onCompletedChanged
         )
@@ -65,6 +70,7 @@ fun QuestList(
 @Composable
 fun QuestsList(
     collection: List<QuestsCollection>,
+    highlighted: Quest? = null,
     lazyListState: IndexedLazyListState,
     onCompletedChanged: (Quest, Boolean) -> Unit
 ) {
@@ -90,6 +96,7 @@ fun QuestsList(
                     quests(
                         collection.quests,
                         expandedItems::contains,
+                        highlighted,
                         ::onClick,
                         onCompletedChanged
                     )
@@ -101,6 +108,7 @@ fun QuestsList(
                         quests(
                             quests,
                             expandedItems::contains,
+                            highlighted,
                             ::onClick,
                             onCompletedChanged
                         )
@@ -149,12 +157,14 @@ fun LazyListScope.questGroupHeader(
 fun LazyListScope.quests(
     quests: List<Quest>,
     isSelected: (Quest) -> Boolean,
+    highlighted: Quest? = null,
     onClick: (Quest) -> Unit,
     onCompletedChanged: (Quest, Boolean) -> Unit
 ) = items(quests, key = { it.id }) {
     QuestCard(
         modifier = Modifier.padding(horizontal = 12.dp),
         quest = it,
+        isHighlighted = highlighted?.id == it.id,
         isSelected = isSelected(it),
         onClick = onClick,
         onCompletedChanged = { isChecked ->

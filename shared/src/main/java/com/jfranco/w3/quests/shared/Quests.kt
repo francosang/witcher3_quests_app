@@ -155,13 +155,15 @@ fun List<QuestsCollection>.filter(predicate: (Quest) -> Boolean): List<QuestsCol
 }
 
 
-fun List<Quest>.groupContiguousItemsByLocation(): List<Pair<String, List<Quest>>> =
-    buildList {
+fun List<Quest>.groupContiguousItemsByLocation(): List<Pair<String, List<Quest>>> {
+    val list = this
+    if (list.isEmpty()) return emptyList()
+    return buildList {
         var previousLocation: String? = null
         var currentGroup = mutableListOf<Quest>()
 
         // iterate over each incoming value
-        for (currentElement: Quest in this@groupContiguousItemsByLocation) {
+        for (currentElement: Quest in list) {
             if (previousLocation == null) {
                 previousLocation = currentElement.location
             } else if (previousLocation != currentElement.location) {
@@ -175,3 +177,4 @@ fun List<Quest>.groupContiguousItemsByLocation(): List<Pair<String, List<Quest>>
 
         add(previousLocation!! to currentGroup.toList())
     }
+}
