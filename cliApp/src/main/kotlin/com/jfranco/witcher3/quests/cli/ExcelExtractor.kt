@@ -87,7 +87,7 @@ class ExcelExtractor(
                 message = considerIgnoringMessage
                 continue
             } else if (row.containsString(storyBranchMarker)) {
-                storyBranch = row.getCell(0).stringCellValue
+                storyBranch = row.getCellAt(0).stringCellValue
                 continue
             } else if (isRowBlank(row)) {
                 emptyRowCount++
@@ -105,9 +105,10 @@ class ExcelExtractor(
             val name = row.getValueAt(1) ?: previousName
             val link = row.getLinkAddressAt(1) ?: previousLink
             val color = row.getColorAt(1) ?: previousColor
-            val extra = row.getValueAt(3)?.let { listOf(ExtraDetail(it)) } ?: emptyList()
-
-            // println("${(location ?: "").padEnd(5)} ${(name ?: "").padEnd(10)}, ${extra.firstOrNull()}")
+            val extra = row.getValueAt(3)?.let {
+                val extraLink = null // row.getLinkAddressAt(3)
+                listOf(ExtraDetail(it, link = extraLink))
+            } ?: emptyList()
 
             if (location != null && name != null) {
                 val (quest, level) = extractLevel(name)
@@ -172,7 +173,7 @@ class ExcelExtractor(
 // Helper function to check if a row is completely blank
 fun isRowBlank(row: Row): Boolean {
     for (cell in row) {
-        if (getCellValue(cell)?.isNotBlank() == true) {
+        if (cell.getCellValue()?.isNotBlank() == true) {
             return false
         }
     }
@@ -181,7 +182,7 @@ fun isRowBlank(row: Row): Boolean {
 
 fun Row.containsString(str: String): Boolean {
     for (cell in this) {
-        val cellValue = getCellValue(cell)
+        val cellValue = cell.getCellValue()
         if (cellValue.isNullOrBlank()) return false
 
         if (cellValue.contains(str)) {
@@ -205,23 +206,27 @@ fun getCellColor(cell: Cell): String? {
     }
 }
 
+fun Row.getCellAt(int: Int): Cell {
+    return getCell(int, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK)
+}
+
 fun Row.getValueAt(int: Int): String? {
-    val cell = getCell(int, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK)
-    return getCellValue(cell)
+    return getCellAt(int).getCellValue()
 }
 
 fun Row.getLinkAddressAt(int: Int): String? {
-    val cell = getCell(int, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK)
-    return cell?.hyperlink?.address
+    val cell = getCellAt(int)
+    return cell.hyperlink?.address
 }
 
 fun Row.getColorAt(int: Int): String? {
-    val cell = getCell(int, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK)
+    val cell = getCellAt(int)
     return getCellColor(cell)
 }
 
 // Helper function to get the value of a cell as a string
-fun getCellValue(cell: Cell): String? {
+fun Cell.getCellValue(): String? {
+    val cell = this
     return when (cell.cellType) {
         CellType.STRING -> cell.stringCellValue
         CellType.NUMERIC -> if (DateUtil.isCellDateFormatted(cell)) {
