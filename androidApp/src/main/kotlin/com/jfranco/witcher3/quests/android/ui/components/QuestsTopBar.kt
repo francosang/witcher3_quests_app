@@ -25,12 +25,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.jfranco.w3.quests.shared.Quest
 import com.jfranco.witcher3.quests.android.R
-import com.jfranco.witcher3.quests.android.ui.screens.QuestsUiState
+import com.jfranco.witcher3.quests.android.ui.screens.QuestsState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun QuestsTopBar(
-    state: QuestsUiState,
+    state: QuestsState,
     onToggleSearch: (Boolean) -> Unit,
     onUpdateSearchQuery: (String) -> Unit,
     onResultSelected: (Quest) -> Unit,

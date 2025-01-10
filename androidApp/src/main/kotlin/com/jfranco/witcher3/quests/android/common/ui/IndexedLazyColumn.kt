@@ -1,4 +1,4 @@
-package com.jfranco.witcher3.quests.android.ui.components
+package com.jfranco.witcher3.quests.android.common.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.*
@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
-import androidx.compose.ui.unit.center
 import androidx.compose.ui.unit.dp
 
 @Composable

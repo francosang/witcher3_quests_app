@@ -1,137 +1,35 @@
 package com.jfranco.witcher3.quests.android.ui.screens
 
-import android.util.Log
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.jfranco.w3.quests.shared.Order
 import com.jfranco.w3.quests.shared.Quest
-import com.jfranco.w3.quests.shared.QuestGroup
 import com.jfranco.w3.quests.shared.QuestStatus
-import com.jfranco.w3.quests.shared.QuestsCollection
 import com.jfranco.w3.quests.shared.QuestsRepository
-import com.jfranco.w3.quests.shared.filter
-import com.jfranco.w3.quests.shared.groupContiguousItemsByLocation
 import com.jfranco.witcher3.quests.android.MainApp
-import kotlinx.atomicfu.atomic
-import kotlinx.atomicfu.updateAndGet
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import com.jfranco.witcher3.quests.android.common.state.BaseViewModel
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.emitAll
-import kotlinx.coroutines.flow.flattenMerge
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.map
 
-@Immutable
-data class QuestsUiState(
-    private val quests: List<Quest> = emptyList(),
-    private val questsStatusById: Map<Int, QuestStatus> = emptyMap(),
-    val hidingCompletedQuests: Boolean = false,
-    val isSearching: Boolean = false,
-    val searchQuery: String = "",
-    val highlightQuest: Quest? = null,
-    val scrollTo: Quest? = null,
-) {
-
-    val collections: List<QuestsCollection> = quests
-        .groupContiguousItemsByLocation()
-        .map { (location, allQuests) ->
-            val (questsInOrder, questsAnyOrder) = allQuests.partition { it.order is Order.Suggested }
-
-            val groups = buildList {
-                if (questsInOrder.isNotEmpty())
-                    this.add(QuestGroup("Complete in suggested order", questsInOrder))
-
-                if (questsAnyOrder.isNotEmpty())
-                    this.add(QuestGroup("Complete in any order at any time", questsAnyOrder))
-            }
-
-            QuestsCollection.QuestsGrouped(
-                location,
-                groups
-            )
-        }
-        .map { locationAndQuests ->
-            val updatedGroups = locationAndQuests.questsGroups.map { questGroup ->
-                questGroup.copy(
-                    quests = questGroup.quests.map { quest ->
-                        if (questsStatusById.contains(quest.id)) {
-                            val status = questsStatusById.getValue(quest.id)
-                            quest.copy(isCompleted = status.isCompleted)
-                        } else {
-                            quest
-                        }
-                    }
-                )
-            }
-            locationAndQuests.copy(questsGroups = updatedGroups)
-        }.filter { hidingCompletedQuests && !it.isCompleted || !hidingCompletedQuests }
-
-
-    val searchResults = quests
-        .filter { it.quest.contains(searchQuery, ignoreCase = true) }
-
-    override fun toString(): String = """QuestsUiState(
-                quests=${quests.size}, 
-                collections=${collections.size}, 
-                searchResults=${searchResults.size}, 
-                hidingCompletedQuests=$hidingCompletedQuests, 
-                isSearching=$isSearching, 
-                searchQuery='$searchQuery', 
-                highlightQuest=$highlightQuest, 
-                scrollTo=$scrollTo,
-            )""".trimIndent()
-}
-
-sealed class Actions {
-    data object ShowCompletedQuests : Actions()
-    data object HideCompletedQuests : Actions()
-    data class UpdateSearchQuery(val text: String) : Actions()
-    data class ToggleSearch(val boolean: Boolean) : Actions()
-    data class SearchSelected(val quest: Quest) : Actions()
-    data class UpdateQuestStatus(val quest: Quest, val completed: Boolean) : Actions()
-}
-
-open class QuestsViewModel(
+class QuestsViewModel(
     private val questsRepository: QuestsRepository,
-) : ViewModel() {
+) : BaseViewModel<QuestsState, Action>(QuestsState()) {
 
-    private val actions = MutableSharedFlow<Actions>(replay = 1)
-
-    private val quests: Flow<List<Quest>> = flow {
-        emit(questsRepository.getQuests())
-    }
-
-    private val lastCompletedQuest: Flow<QuestStatus?> = flow {
-        emit(questsRepository.getLastCompletedQuest())
-    }
-
-    private val questsUpdates = questsRepository.questsStatusUpdates()
-
-    private val ref = atomic(QuestsUiState())
-
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private val state = flow {
-        val initialization = combine(
-            quests,
-            lastCompletedQuest,
-            questsUpdates,
+    override suspend fun initialization(): Flow<QuestsState> {
+        return combine(
+            questsRepository::getQuests.asFlow(),
+            questsRepository::getLastCompletedQuest.asFlow(),
+            questsRepository.questsStatusUpdates(),
         ) { quests, lastQuestUpdate, questsStatus ->
             // TODO: Avoid performing this logic every time
             val lastCompletedQuest = lastQuestUpdate?.let { last ->
                 quests.find { it.id == last.id }
             }
-
-            ref.updateAndGet {
+            state {
                 it.copy(
                     quests = quests,
                     scrollTo = lastCompletedQuest,
@@ -139,51 +37,38 @@ open class QuestsViewModel(
                 )
             }
         }
+    }
 
-        val actions = actions.map {
-            Log.i("APP", "Action: $it")
-
-            val prev = ref.value
-            val newState = handle(prev, it)
-            ref.updateAndGet { newState }
-        }
-
-        emitAll(listOf(initialization, actions).asFlow().flattenMerge())
-    }.distinctUntilChanged()
-
-    @Composable
-    fun collectStateWithLifecycle() = state.collectAsStateWithLifecycle(ref.value)
-
-    protected open suspend fun handle(previous: QuestsUiState, action: Actions): QuestsUiState {
+    override suspend fun handle(state: QuestsState, action: Action): QuestsState {
         return when (action) {
-            Actions.HideCompletedQuests -> {
-                previous.copy(hidingCompletedQuests = true)
+            Action.HideCompletedQuests -> {
+                state.copy(hidingCompletedQuests = true)
             }
 
-            Actions.ShowCompletedQuests -> {
-                previous.copy(hidingCompletedQuests = false)
+            Action.ShowCompletedQuests -> {
+                state.copy(hidingCompletedQuests = false)
             }
 
-            is Actions.ToggleSearch -> {
-                previous.copy(
+            is Action.ToggleSearch -> {
+                state.copy(
                     isSearching = action.boolean,
-                    searchQuery = if (action.boolean.not()) "" else previous.searchQuery,
+                    searchQuery = if (action.boolean.not()) "" else state.searchQuery,
                 )
             }
 
-            is Actions.UpdateSearchQuery -> {
-                previous.copy(searchQuery = action.text)
+            is Action.UpdateSearchQuery -> {
+                state.copy(searchQuery = action.text)
             }
 
-            is Actions.SearchSelected -> {
-                previous.copy(
+            is Action.SearchSelected -> {
+                state.copy(
                     scrollTo = action.quest,
                     isSearching = false,
                     searchQuery = "",
                 )
             }
 
-            is Actions.UpdateQuestStatus -> {
+            is Action.UpdateQuestStatus -> {
                 questsRepository.save(
                     QuestStatus(
                         action.quest.id,
@@ -192,33 +77,33 @@ open class QuestsViewModel(
                     )
                 )
 
-                previous
+                state
             }
         }
     }
 
     fun save(quest: Quest, completed: Boolean) {
-        actions.tryEmit(Actions.UpdateQuestStatus(quest, completed))
+        emit(Action.UpdateQuestStatus(quest, completed))
     }
 
     fun showCompletedQuests() {
-        actions.tryEmit(Actions.ShowCompletedQuests)
+        emit(Action.ShowCompletedQuests)
     }
 
     fun hideCompletedQuests() {
-        actions.tryEmit(Actions.HideCompletedQuests)
+        emit(Action.HideCompletedQuests)
     }
 
     fun updateSearchQuery(text: String) {
-        actions.tryEmit(Actions.UpdateSearchQuery(text))
+        emit(Action.UpdateSearchQuery(text))
     }
 
     fun toggleSearch(boolean: Boolean) {
-        actions.tryEmit(Actions.ToggleSearch(boolean))
+        emit(Action.ToggleSearch(boolean))
     }
 
     fun resultSelected(quest: Quest) {
-        actions.tryEmit(Actions.SearchSelected(quest))
+        emit(Action.SearchSelected(quest))
     }
 
     companion object {
