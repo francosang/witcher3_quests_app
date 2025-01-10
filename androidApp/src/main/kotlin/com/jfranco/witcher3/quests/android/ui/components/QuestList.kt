@@ -34,7 +34,7 @@ fun QuestList(
     state: QuestsUiState,
     onCompletedChanged: (Quest, Boolean) -> Unit
 ) {
-    val questsByLocation = state.questsCollections
+    val questsByLocation = state.collections
 
     if (questsByLocation.isEmpty()) {
         Column(
@@ -49,18 +49,18 @@ fun QuestList(
         val indexedListState = rememberIndexedLazyListState()
 
         // to avoid repeating the animation on config changes, etc
-        var playedAnimation by rememberSaveable { mutableStateOf<Int?>(null) }
+        var lastAnimation by rememberSaveable { mutableStateOf<Int?>(null) }
 
-        if (state.scrollTo != null && playedAnimation != state.scrollTo.id) {
+        if (state.scrollTo != null && lastAnimation != state.scrollTo.id) {
             LaunchedEffect(state.scrollTo) {
                 indexedListState.animateScrollToItem(state.scrollTo.id)
-                playedAnimation = state.scrollTo.id
+                lastAnimation = state.scrollTo.id
             }
         }
 
         QuestsList(
             questsByLocation,
-            if (playedAnimation != state.scrollTo?.id) state.scrollTo else null,
+            if (lastAnimation != state.scrollTo?.id) state.scrollTo else null,
             indexedListState,
             onCompletedChanged
         )

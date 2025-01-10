@@ -82,7 +82,7 @@ fun QuestCard(
     val scaleA = remember { Animatable(initialValue = 1f) }
 
     if (isHighlighted) {
-        LaunchedEffect(Unit) {
+        LaunchedEffect(quest) {
             delay(50)
             scaleA.animateTo(
                 targetValue = 1.1f,
@@ -131,6 +131,7 @@ fun QuestCard(
 
                 )
             )
+            delay(100)
         }
     }
 

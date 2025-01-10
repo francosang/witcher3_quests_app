@@ -6,7 +6,7 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
-import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jfranco.w3.quests.shared.Order
@@ -18,14 +18,18 @@ import com.jfranco.w3.quests.shared.QuestsRepository
 import com.jfranco.w3.quests.shared.filter
 import com.jfranco.w3.quests.shared.groupContiguousItemsByLocation
 import com.jfranco.witcher3.quests.android.MainApp
+import kotlinx.atomicfu.atomic
+import kotlinx.atomicfu.updateAndGet
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flattenMerge
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 
 @Immutable
 data class QuestsUiState(
@@ -38,7 +42,7 @@ data class QuestsUiState(
     val scrollTo: Quest? = null,
 ) {
 
-    val questsCollections: List<QuestsCollection> = quests
+    val collections: List<QuestsCollection> = quests
         .groupContiguousItemsByLocation()
         .map { (location, allQuests) ->
             val (questsInOrder, questsAnyOrder) = allQuests.partition { it.order is Order.Suggested }
@@ -76,6 +80,16 @@ data class QuestsUiState(
     val searchResults = quests
         .filter { it.quest.contains(searchQuery, ignoreCase = true) }
 
+    override fun toString(): String = """QuestsUiState(
+                quests=${quests.size}, 
+                collections=${collections.size}, 
+                searchResults=${searchResults.size}, 
+                hidingCompletedQuests=$hidingCompletedQuests, 
+                isSearching=$isSearching, 
+                searchQuery='$searchQuery', 
+                highlightQuest=$highlightQuest, 
+                scrollTo=$scrollTo,
+            )""".trimIndent()
 }
 
 sealed class Actions {
@@ -87,67 +101,58 @@ sealed class Actions {
     data class UpdateQuestStatus(val quest: Quest, val completed: Boolean) : Actions()
 }
 
-
 open class QuestsViewModel(
     private val questsRepository: QuestsRepository,
 ) : ViewModel() {
 
     private val actions = MutableSharedFlow<Actions>(replay = 1)
 
-    private val initialState = QuestsUiState()
-    private val _state = MutableStateFlow(initialState)
-    val state: StateFlow<QuestsUiState>
-        get() = _state.stateIn(
-            scope = viewModelScope,
-            initialValue = initialState,
-            started = SharingStarted.WhileSubscribed(5000)
-        )
+    private val quests: Flow<List<Quest>> = flow {
+        emit(questsRepository.getQuests())
+    }
 
-    init {
-        viewModelScope.launch {
-            Log.w("APP", "Initial load")
+    private val lastCompletedQuest: Flow<QuestStatus?> = flow {
+        emit(questsRepository.getLastCompletedQuest())
+    }
 
-            val quests = questsRepository.getQuests()
-            val lastCompletedQuest = questsRepository.getLastCompletedQuest()?.let { last ->
+    private val questsUpdates = questsRepository.questsStatusUpdates()
+
+    private val ref = atomic(QuestsUiState())
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val state = flow {
+        val initialization = combine(
+            quests,
+            lastCompletedQuest,
+            questsUpdates,
+        ) { quests, lastQuestUpdate, questsStatus ->
+            // TODO: Avoid performing this logic every time
+            val lastCompletedQuest = lastQuestUpdate?.let { last ->
                 quests.find { it.id == last.id }
             }
 
-            _state.update {
+            ref.updateAndGet {
                 it.copy(
                     quests = quests,
                     scrollTo = lastCompletedQuest,
+                    questsStatusById = questsStatus.associateBy(QuestStatus::id)
                 )
             }
         }
-        viewModelScope.launch {
-            questsRepository.questsStatusUpdates().collect { questsStatus ->
-                _state.update {
-                    it.copy(
-                        questsStatusById = questsStatus.associateBy(QuestStatus::id)
-                    )
-                }
-            }
 
-            Log.e("APP", "----> Done collecting status updates")
+        val actions = actions.map {
+            Log.i("APP", "Action: $it")
+
+            val prev = ref.value
+            val newState = handle(prev, it)
+            ref.updateAndGet { newState }
         }
 
-        viewModelScope.launch {
-            actions.map {
-                val prev = _state.value
-                val newState = handle(prev, it)
+        emitAll(listOf(initialization, actions).asFlow().flattenMerge())
+    }.distinctUntilChanged()
 
-                Log.w("APP", "Prev state - ${prev.hashCode()}")
-                Log.w("APP", "Action     - ${it.hashCode()}")
-                Log.w("APP", "New  state - ${newState.hashCode()}")
-
-                newState
-            }.collect {
-                _state.value = it
-            }
-
-            Log.e("APP", "----> Done collecting actions")
-        }
-    }
+    @Composable
+    fun collectStateWithLifecycle() = state.collectAsStateWithLifecycle(ref.value)
 
     protected open suspend fun handle(previous: QuestsUiState, action: Actions): QuestsUiState {
         return when (action) {
@@ -212,7 +217,7 @@ open class QuestsViewModel(
         actions.tryEmit(Actions.ToggleSearch(boolean))
     }
 
-    fun searchSelected(quest: Quest) {
+    fun resultSelected(quest: Quest) {
         actions.tryEmit(Actions.SearchSelected(quest))
     }
 

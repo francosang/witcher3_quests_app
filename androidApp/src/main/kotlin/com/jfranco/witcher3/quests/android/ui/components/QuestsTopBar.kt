@@ -23,24 +23,20 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.jfranco.w3.quests.shared.Quest
 import com.jfranco.witcher3.quests.android.R
 import com.jfranco.witcher3.quests.android.ui.screens.QuestsUiState
-import com.jfranco.witcher3.quests.android.ui.screens.questsViewModel
 
-/*
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
 fun QuestsTopBar(
     state: QuestsUiState,
     onToggleSearch: (Boolean) -> Unit,
     onUpdateSearchQuery: (String) -> Unit,
-    onSearchSelected: (Quest) -> Unit,
+    onResultSelected: (Quest) -> Unit,
     onShowCompletedQuests: () -> Unit,
     onHideCompletedQuests: () -> Unit,
 ) {
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun QuestsTopBar(state: QuestsUiState) {
-    val viewModel = questsViewModel()
     val hidingCompletedQuests = state.hidingCompletedQuests
     val searchResults = state.searchResults
     val searchQuery = state.searchQuery
@@ -67,7 +63,7 @@ fun QuestsTopBar(state: QuestsUiState) {
                         Row {
                             if (isSearching) {
                                 IconButton(onClick = {
-                                    viewModel.toggleSearch(false)
+                                    onToggleSearch(false)
                                 }) {
                                     Icon(
                                         Icons.Default.Close,
@@ -77,7 +73,7 @@ fun QuestsTopBar(state: QuestsUiState) {
                             } else {
                                 IconButton(onClick = {
                                     focusRequester.requestFocus()
-                                    viewModel.toggleSearch(true)
+                                    onToggleSearch(true)
                                 }) {
                                     Icon(
                                         Icons.Default.Search,
@@ -88,8 +84,8 @@ fun QuestsTopBar(state: QuestsUiState) {
 
                             IconButton(onClick = {
                                 when (hidingCompletedQuests) {
-                                    true -> viewModel.showCompletedQuests()
-                                    false -> viewModel.hideCompletedQuests()
+                                    true -> onShowCompletedQuests()
+                                    false -> onHideCompletedQuests()
                                 }
                             }) {
 
@@ -108,14 +104,14 @@ fun QuestsTopBar(state: QuestsUiState) {
                         }
                     },
                     query = searchQuery,
-                    onQueryChange = viewModel::updateSearchQuery,
-                    onSearch = viewModel::updateSearchQuery,
+                    onQueryChange = onUpdateSearchQuery,
+                    onSearch = onUpdateSearchQuery,
                     expanded = isSearching,
-                    onExpandedChange = viewModel::toggleSearch,
+                    onExpandedChange = onToggleSearch,
                 )
             },
             expanded = isSearching,
-            onExpandedChange = viewModel::toggleSearch,
+            onExpandedChange = onToggleSearch,
         ) {
             LazyColumn {
                 items(searchResults) { quest ->
@@ -124,7 +120,7 @@ fun QuestsTopBar(state: QuestsUiState) {
                         modifier = Modifier
                             .padding(16.dp)
                             .clickable {
-                                viewModel.searchSelected(quest)
+                                onResultSelected(quest)
                             }
                     )
                 }

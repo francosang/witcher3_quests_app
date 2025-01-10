@@ -48,6 +48,7 @@ android {
 dependencies {
     implementation(project(":shared"))
 
+    implementation("org.jetbrains.kotlinx:atomicfu:0.26.1")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     implementation("androidx.compose.material:material-icons-extended")
     implementation(libs.androidx.lifecycle.viewmodel.compose)

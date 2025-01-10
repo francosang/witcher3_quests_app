@@ -17,6 +17,13 @@ sealed class QuestsCollection {
 
     data class QuestsGrouped(val location: String, val questsGroups: List<QuestGroup>) :
         QuestsCollection()
+
+    val size by lazy {
+        when (this) {
+            is QuestsByLocation -> quests.size
+            is QuestsGrouped -> questsGroups.sumOf { it.quests.size }
+        }
+    }
 }
 
 data class QuestGroup(
