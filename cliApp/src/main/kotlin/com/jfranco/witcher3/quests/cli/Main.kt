@@ -13,6 +13,16 @@ fun xlsx() {
 
     val quests = repo.extractData()
 
+    val hyperlinks =
+        quests.flatMap { it.extraDetails }.filter { it.detail.contains("hyperlink", true) }
+    println("Hyperlinks: ${hyperlinks.size}")
+
+    val links = quests.flatMap { it.extraDetails }.filter { it.link != null }
+    println("Links: ${links.size}")
+
+    val both = quests.flatMap { it.extraDetails }.filter { it.detail.contains("hyperlink", true) && it.link != null }
+    println("Both: ${both.size}")
+
     quests
         .groupBy { it.id }
         .filter { it.value.size > 1 }

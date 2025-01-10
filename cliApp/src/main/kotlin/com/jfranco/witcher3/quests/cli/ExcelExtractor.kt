@@ -44,6 +44,8 @@ val missionTypeByColor = mapOf(
     "8e7cc3" to QuestType.ChanceEncounters,
 )
 
+val hyperlinkRegex = """HYPERLINK\(\s*"([^"]+)"\s*,\s*"(.*)\)""".toRegex()
+
 interface DataExtractor {
     fun extractData(): List<Quest>
     fun write(data: List<Quest>, destination: String)
@@ -105,9 +107,17 @@ class ExcelExtractor(
             val name = row.getValueAt(1) ?: previousName
             val link = row.getLinkAddressAt(1) ?: previousLink
             val color = row.getColorAt(1) ?: previousColor
-            val extra = row.getValueAt(3)?.let {
-                val extraLink = null // row.getLinkAddressAt(3)
-                listOf(ExtraDetail(it, link = extraLink))
+            val extra = row.getValueAt(3)?.replace("\n", "")?.let {
+
+                val extraDetailLink = row.getLinkAddressAt(3)
+                val matchResult = hyperlinkRegex.find(it)
+
+                val (detail, detailLink) = if (matchResult != null && extraDetailLink != null) {
+                    throw RuntimeException("Multiple links in the same cell")
+                } else if (matchResult != null) {
+                    matchResult.groupValues[2] to matchResult.groupValues[1]
+                } else it to extraDetailLink
+                listOf(ExtraDetail(detail, detailLink))
             } ?: emptyList()
 
             if (location != null && name != null) {

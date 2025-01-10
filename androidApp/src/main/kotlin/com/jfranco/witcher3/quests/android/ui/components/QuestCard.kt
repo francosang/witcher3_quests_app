@@ -17,12 +17,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -78,7 +80,7 @@ fun QuestCard(
     onClick: (Quest) -> Unit,
     onCompletedChanged: (Boolean) -> Unit
 ) {
-
+    val uriHandler = LocalUriHandler.current
     val scaleA = remember { Animatable(initialValue = 1f) }
 
     if (isHighlighted) {
@@ -151,8 +153,6 @@ fun QuestCard(
         val contentPadding = 16.dp
         val contentVerticalPadding = if (isBigCard) 16.dp else 8.dp
 
-        val current = LocalUriHandler.current
-
         Row(
             modifier = Modifier
                 .padding(horizontal = contentPadding)
@@ -199,13 +199,27 @@ fun QuestCard(
         }
 
         if (isBigCard) {
-            Text(
-                text = quest.quest,
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier
-                    .padding(horizontal = contentPadding)
-                    .fillMaxWidth(),
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = quest.quest,
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier
+                        .padding(horizontal = contentPadding)
+                        .weight(1f),
+                )
+
+                Icon(
+                    modifier = Modifier
+                        .padding(end = contentPadding)
+                        .clickable {
+                            uriHandler.openUri(quest.url)
+                        },
+                    imageVector = Icons.Default.Link,
+                    contentDescription = null
+                )
+            }
 
             val details = quest.extraDetails
 
@@ -213,20 +227,6 @@ fun QuestCard(
                 Column(
                     Modifier.padding(top = contentPadding)
                 ) {
-                    Button(
-                        modifier = Modifier
-                            .padding(bottom = contentPadding)
-                            .align(Alignment.CenterHorizontally),
-                        elevation = ButtonDefaults.buttonElevation(
-                            defaultElevation = 4.dp,
-                        ),
-                        onClick = {
-                            current.openUri(quest.url)
-                        }
-                    ) {
-                        Text("Open external link")
-                    }
-
                     details.forEach { detail ->
                         HorizontalDivider(
                             color = MaterialTheme.colorScheme.tertiaryContainer.copy(
@@ -248,17 +248,17 @@ fun QuestCard(
                                     .padding(vertical = contentPadding / 2),
                                 style = MaterialTheme.typography.bodySmall,
                             )
-//                            CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
-//                                Checkbox(
-//                                    checked = detail.isCompleted,
-//                                    onCheckedChange = { isChecked ->
-//                                        Log.i(
-//                                            "MainActivity",
-//                                            "Checked: $isChecked"
-//                                        )
-//                                    }
-//                                )
-//                            }
+                            val link = detail.link
+                            if (link != null) {
+                                Icon(
+                                    modifier = Modifier
+                                        .clickable {
+                                            uriHandler.openUri(link)
+                                        },
+                                    imageVector = Icons.Default.Link,
+                                    contentDescription = null
+                                )
+                            }
                         }
                     }
                     HorizontalDivider(
@@ -335,7 +335,7 @@ fun QuestsOpenPreview() {
         isCompleted = false,
         extraDetails = listOf(
             ExtraDetail("Detail 1", null, false),
-            ExtraDetail("Detail 2", null, true)
+            ExtraDetail("Detail 2", "null", true)
         ),
         location = "Location",
         suggested = Level.Any,
