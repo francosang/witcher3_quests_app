@@ -1,8 +1,5 @@
 package com.jfranco.witcher3.quests.android.ui.components
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutLinearInEasing
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -18,24 +15,20 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Link
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -48,7 +41,6 @@ import com.jfranco.w3.quests.shared.Order
 import com.jfranco.w3.quests.shared.Quest
 import com.jfranco.w3.quests.shared.QuestType
 import com.jfranco.witcher3.quests.android.ui.theme.AppTheme
-import kotlinx.coroutines.delay
 
 @Composable
 fun QuestImage(
@@ -81,69 +73,20 @@ fun QuestCard(
     onCompletedChanged: (Boolean) -> Unit
 ) {
     val uriHandler = LocalUriHandler.current
-    val scaleA = remember { Animatable(initialValue = 1f) }
-
-    if (isHighlighted) {
-        LaunchedEffect(quest) {
-            delay(50)
-            scaleA.animateTo(
-                targetValue = 1.1f,
-                animationSpec = tween(
-                    durationMillis = 100,
-                    easing = FastOutLinearInEasing
-                )
-            )
-            scaleA.animateTo(
-                targetValue = 1f,
-                animationSpec = tween(
-                    durationMillis = 100,
-                    easing = FastOutLinearInEasing
-
-                )
-            )
-            scaleA.animateTo(
-                targetValue = 1.1f,
-                animationSpec = tween(
-                    durationMillis = 100,
-                    easing = FastOutLinearInEasing
-
-                )
-            )
-            scaleA.animateTo(
-                targetValue = 1f,
-                animationSpec = tween(
-                    durationMillis = 100,
-                    easing = FastOutLinearInEasing
-
-                )
-            )
-            scaleA.animateTo(
-                targetValue = 1.1f,
-                animationSpec = tween(
-                    durationMillis = 100,
-                    easing = FastOutLinearInEasing
-
-                )
-            )
-            scaleA.animateTo(
-                targetValue = 1f,
-                animationSpec = tween(
-                    durationMillis = 100,
-                    easing = FastOutLinearInEasing
-
-                )
-            )
-            delay(100)
-        }
-    }
-
     Card(
         modifier = modifier
             .semantics { selected = isSelected }
-            .scale(scale = scaleA.value)
             .clickable { onClick(quest) }
             .fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isHighlighted) {
+                Color(0xFFFCE9A2)
+            } else {
+                MaterialTheme.colorScheme.primaryContainer
+            }
+        )
     ) {
+
         val isBigCard = if (quest.isCompleted) {
             isSelected
         } else {
@@ -152,6 +95,8 @@ fun QuestCard(
 
         val contentPadding = 16.dp
         val contentVerticalPadding = if (isBigCard) 16.dp else 8.dp
+
+        val title = quest.quest
 
         Row(
             modifier = Modifier
@@ -184,7 +129,7 @@ fun QuestCard(
                     }
                 } else {
                     Text(
-                        text = quest.quest,
+                        text = title,
                         style = MaterialTheme.typography.titleSmall,
                     )
                 }
@@ -203,7 +148,7 @@ fun QuestCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = quest.quest,
+                    text = title,
                     style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier
                         .padding(horizontal = contentPadding)

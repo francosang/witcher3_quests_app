@@ -32,7 +32,7 @@ class QuestsViewModel(
             state {
                 it.copy(
                     quests = quests,
-                    scrollTo = lastCompletedQuest,
+                    scrollTo = Scroll.OnLoad(lastCompletedQuest),
                     questsStatusById = questsStatus.associateBy(QuestStatus::id)
                 )
             }
@@ -62,7 +62,7 @@ class QuestsViewModel(
 
             is Action.SearchSelected -> {
                 state.copy(
-                    scrollTo = action.quest,
+                    scrollTo = Scroll.OnResult(action.quest),
                     isSearching = false,
                     searchQuery = "",
                 )

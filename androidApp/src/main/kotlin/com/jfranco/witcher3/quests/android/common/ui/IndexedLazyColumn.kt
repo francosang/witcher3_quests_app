@@ -51,14 +51,22 @@ class IndexedLazyListState internal constructor(
         itemIndexMapping[key] = index
     }
 
-    suspend fun animateScrollToItem(key: Any) {
+    suspend fun animateScrollToItem(
+        key: Any,
+        scrollOffset: Int = 0
+    ) {
+        val index = itemIndexMapping[key] ?: return
+        listState.animateScrollToItem(index, scrollOffset)
+    }
+
+    suspend fun animateScrollAndCentralizeItem(key: Any) {
         val index = itemIndexMapping[key] ?: return
         listState.animateScrollToItem(index)
 
-        animateScrollAndCentralizeItem(key)
+        centralizeItem(key)
     }
 
-    private suspend fun animateScrollAndCentralizeItem(key: Any) {
+    private suspend fun centralizeItem(key: Any) {
         val index = itemIndexMapping[key] ?: return
 
         val itemInfo = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }

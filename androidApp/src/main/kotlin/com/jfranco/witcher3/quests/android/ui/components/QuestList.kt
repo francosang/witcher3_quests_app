@@ -1,5 +1,6 @@
 package com.jfranco.witcher3.quests.android.ui.components
 
+import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -31,6 +32,7 @@ import com.jfranco.witcher3.quests.android.common.ui.IndexedLazyColumn
 import com.jfranco.witcher3.quests.android.common.ui.IndexedLazyListState
 import com.jfranco.witcher3.quests.android.common.ui.rememberIndexedLazyListState
 import com.jfranco.witcher3.quests.android.ui.screens.QuestsState
+import com.jfranco.witcher3.quests.android.ui.screens.Scroll
 
 @Composable
 fun QuestList(
@@ -52,18 +54,39 @@ fun QuestList(
         val indexedListState = rememberIndexedLazyListState()
 
         // to avoid repeating the animation on config changes, etc
-        var lastAnimation by rememberSaveable { mutableStateOf<Int?>(null) }
+        var initialScroll by rememberSaveable { mutableStateOf(false) }
+        var lastResultSelected by rememberSaveable { mutableStateOf<Int?>(null) }
 
-        if (state.scrollTo != null && lastAnimation != state.scrollTo.id) {
-            LaunchedEffect(state.scrollTo) {
-                indexedListState.animateScrollToItem(state.scrollTo.id)
-                lastAnimation = state.scrollTo.id
+        val scrollQuest = state.scrollTo?.let {
+            remember(it) {
+                when (it) {
+                    is Scroll.OnLoad ->
+                        if (initialScroll.not()) {
+                            initialScroll = true
+                            it.quest
+                        } else {
+                            null
+                        }
+
+                    is Scroll.OnResult -> if (lastResultSelected != it.quest.id) {
+                        lastResultSelected = it.quest.id
+                        it.quest
+                    } else {
+                        null
+                    }
+                }
+            }
+        }
+
+        LaunchedEffect(state.scrollTo) {
+            if (scrollQuest != null) {
+                indexedListState.animateScrollToItem(scrollQuest.id)
             }
         }
 
         QuestsList(
             questsByLocation,
-            if (lastAnimation != state.scrollTo?.id) state.scrollTo else null,
+            scrollQuest,
             indexedListState,
             onCompletedChanged
         )

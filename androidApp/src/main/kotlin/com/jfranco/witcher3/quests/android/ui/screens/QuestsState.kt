@@ -9,6 +9,11 @@ import com.jfranco.w3.quests.shared.QuestsCollection
 import com.jfranco.w3.quests.shared.filter
 import com.jfranco.w3.quests.shared.groupContiguousItemsByLocation
 
+sealed class Scroll {
+    data class OnLoad(val quest: Quest?) : Scroll()
+    data class OnResult(val quest: Quest) : Scroll()
+}
+
 @Immutable
 data class QuestsState(
     private val quests: List<Quest> = emptyList(),
@@ -17,7 +22,7 @@ data class QuestsState(
     val isSearching: Boolean = false,
     val searchQuery: String = "",
     val highlightQuest: Quest? = null,
-    val scrollTo: Quest? = null,
+    val scrollTo: Scroll? = null,
 ) {
 
     val collections: List<QuestsCollection> = quests
